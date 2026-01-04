@@ -1,14 +1,14 @@
 ARG ALPINE_VERSION=3.23.2
 ARG GOLANG_VERSION=1.25.5
 
-FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:${GOLANG_VERSION}-alpine AS builder
+FROM golang:${GOLANG_VERSION}-alpine AS builder
 
 ARG AWG_BRANCH=master
 ARG AWG_COMMIT=449d7cffd4adf86971bd679d0be5384b443e8be5
 ARG AWG_REPO=https://github.com/amnezia-vpn/amneziawg-go
 
 RUN set -x; \
-    apk add --update --no-cache g++ gcc-aarch64-none-elf git; \
+    apk add --update --no-cache gcc git; \
     git clone --branch "${AWG_BRANCH}" "${AWG_REPO}" /app; cd /app; git reset --hard "${AWG_COMMIT}"
 
 WORKDIR /app
@@ -18,7 +18,6 @@ ARG TARGETARCH TARGETOS
 RUN \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
-    if [ "${TARGETARCH}" = "arm64" ]; then export CC="aarch64-none-elf-gcc"; fi; \
     CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags '-s -w -linkmode external -extldflags "-fno-PIC -static"' -v -o /usr/bin/amneziawg-go
 
