@@ -1,3 +1,4 @@
+ARG ALPINE_VERSION=3.23.2
 ARG GOLANG_VERSION=1.25.5
 
 FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:${GOLANG_VERSION}-alpine AS builder
@@ -19,9 +20,6 @@ RUN \
     --mount=type=cache,target=/go/pkg \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags '-s -w -linkmode external -extldflags "-fno-PIC -static"' -v -o /usr/bin/amneziawg-go
-
-
-ARG ALPINE_VERSION=3.23.2
 
 FROM alpine:${ALPINE_VERSION}
 
