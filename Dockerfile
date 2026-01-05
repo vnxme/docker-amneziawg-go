@@ -25,6 +25,15 @@ FROM alpine:${ALPINE_VERSION}
 
 COPY --from=builder --chmod=0755 /usr/bin/amneziawg-go /usr/bin/
 
+ARG AWGTOOLS_RELEASE="1.0.20250901"
+
+RUN cd /usr/bin/ && \
+    wget https://github.com/amnezia-vpn/amneziawg-tools/releases/download/v${AWGTOOLS_RELEASE}/alpine-3.19-amneziawg-tools.zip && \
+    unzip -j alpine-3.19-amneziawg-tools.zip && \
+    chmod +x /usr/bin/awg /usr/bin/awg-quick && \
+    ln -s /usr/bin/awg /usr/bin/wg && \
+    ln -s /usr/bin/awg-quick /usr/bin/wg-quick
+
 RUN EXTRAS=" \
     bash \
     curl \
