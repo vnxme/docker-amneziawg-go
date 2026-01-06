@@ -52,7 +52,7 @@ COPY --from=builder /app/export /app/import
 WORKDIR /app
 
 RUN \
-    mkdir -p /etc/amnezia/amneziawg /usr/share/man/man8 /usr/share/bash-completion/completions; \
+    mkdir -p /etc/amnezia/amneziawg /usr/share/bash-completion/completions /usr/share/man/man8; \
     chmod 0700 /etc/amnezia/amneziawg; \
     chmod 0755 ./import/bin/*; \
     chmod 0644 ./import/completion/* ./import/man/*; \
