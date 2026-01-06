@@ -12,8 +12,8 @@ echo "${LOCAL_PRIVATE_KEY}" > "./${IFACE}_local_private.key"
 LOCAL_PUBLIC_KEY="$(echo "${LOCAL_PRIVATE_KEY}" | awg pubkey)"
 echo "${LOCAL_PUBLIC_KEY}" > "./${IFACE}_local_public.key"
 
-LOCAL_SHARED_KEY="$(awg genpsk)"
-echo "${LOCAL_SHARED_KEY}" > "./${IFACE}_shared.key"
+REMOTE_PRESHARED_KEY="$(awg genpsk)"
+echo "${REMOTE_PRESHARED_KEY}" > "./${IFACE}_peer_preshared.key"
 
 # Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/configure_container.sh
 cat <<EOF > "./${IFACE}.conf"
@@ -35,7 +35,7 @@ H4 = {TRANSPORT_PACKET_MAGIC_HEADER}
 EOF
 
 # Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/template.conf
-cat <<EOF > "./${IFACE}_peer.conf.template"
+cat <<EOF > "./${IFACE}_remote.conf.template"
 [Interface]
 Address = {REMOTE_ADDR_IPV4}/32, {REMOTE_ADDR_IPV6}/128
 DNS = {PRIMARY_DNS}, {SECONDARY_DNS}
@@ -59,8 +59,17 @@ I5 = {SPECIAL_JUNK_5}
 
 [Peer]
 PublicKey = ${LOCAL_PUBLIC_KEY}
-PresharedKey = ${LOCAL_SHARED_KEY}
+PresharedKey = {REMOTE_PRESHARED_KEY}
 AllowedIPs = 0.0.0.0/0, ::/0
 Endpoint = {LOCAL_ADDR}:{LOCAL_PORT}
+PersistentKeepalive = 25
+EOF
+
+cat <<EOF > "./${IFACE}_peer.conf.template"
+# {REMOTE_NAME}
+[Peer]
+PublicKey = {REMOTE_PUBLIC_KEY}
+PresharedKey = {REMOTE_PRESHARED_KEY}
+AllowedIPs = {REMOTE_ADDR_IPV4}/32, {REMOTE_ADDR_IPV6}/128
 PersistentKeepalive = 25
 EOF
