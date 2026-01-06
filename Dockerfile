@@ -88,7 +88,7 @@ RUN \
     ln -s /usr/share/bash-completion/completions/awg-quick /usr/share/bash-completion/completions/wg-quick; \
     rm -rf ./import
 
-#Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.11.4/client/server_scripts/awg/Dockerfile
+#Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/Dockerfile
 RUN echo -e " \n\
     fs.file-max = 51200 \n\
     \n\
@@ -120,6 +120,8 @@ RUN echo -e " \n\
     * hard nofile 51200 \n\
     " | sed -e 's/^\s\+//g' | tee -a /etc/security/limits.conf
 
+# Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/configure_container.sh
+# Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/template.conf
 RUN \
     mkdir -p /etc/amnezia/amneziawg; \
     chmod 0700 /etc/amnezia/amneziawg; \
