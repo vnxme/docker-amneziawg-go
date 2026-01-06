@@ -135,45 +135,45 @@ RUN \
     echo -e "\
     [Interface]\n\
     PrivateKey = ${LOCAL_PRIVATE_KEY}\n\
-    Address = $AWG_SUBNET_IP/$WIREGUARD_SUBNET_CIDR\n\
-    ListenPort = $AWG_SERVER_PORT\n\
-    Jc = $JUNK_PACKET_COUNT\n\
-    Jmin = $JUNK_PACKET_MIN_SIZE\n\
-    Jmax = $JUNK_PACKET_MAX_SIZE\n\
-    S1 = $INIT_PACKET_JUNK_SIZE\n\
-    S2 = $RESPONSE_PACKET_JUNK_SIZE\n\
-    H1 = $INIT_PACKET_MAGIC_HEADER\n\
-    H2 = $RESPONSE_PACKET_MAGIC_HEADER\n\
-    H3 = $UNDERLOAD_PACKET_MAGIC_HEADER\n\
-    H4 = $TRANSPORT_PACKET_MAGIC_HEADER\n\
+    Address = {LOCAL_ADDR_IPV4}/{LOCAL_ADDR_MASK}\n\
+    ListenPort = {LOCAL_PORT}\n\
+    Jc = {JUNK_PACKET_COUNT}\n\
+    Jmin = {JUNK_PACKET_MIN_SIZE}\n\
+    Jmax = {JUNK_PACKET_MAX_SIZE}\n\
+    S1 = {INIT_PACKET_JUNK_SIZE}\n\
+    S2 = {RESPONSE_PACKET_JUNK_SIZE}\n\
+    H1 = {INIT_PACKET_MAGIC_HEADER}\n\
+    H2 = {RESPONSE_PACKET_MAGIC_HEADER}\n\
+    H3 = {UNDERLOAD_PACKET_MAGIC_HEADER}\n\
+    H4 = {TRANSPORT_PACKET_MAGIC_HEADER}\n\
     " | sed -e 's/^\s\+//g' > ./wg0.conf; \
     echo -e "\
     [Interface]\n\
-    Address = $WIREGUARD_CLIENT_IP/32\n\
-    DNS = $PRIMARY_DNS, $SECONDARY_DNS\n\
-    PrivateKey = $WIREGUARD_CLIENT_PRIVATE_KEY\n\
-    Jc = $JUNK_PACKET_COUNT\n\
-    Jmin = $JUNK_PACKET_MIN_SIZE\n\
-    Jmax = $JUNK_PACKET_MAX_SIZE\n\
-    S1 = $INIT_PACKET_JUNK_SIZE\n\
-    S2 = $RESPONSE_PACKET_JUNK_SIZE\n\
-    S3 = $COOKIE_REPLY_PACKET_JUNK_SIZE\n\
-    S4 = $TRANSPORT_PACKET_JUNK_SIZE\n\
-    H1 = $INIT_PACKET_MAGIC_HEADER\n\
-    H2 = $RESPONSE_PACKET_MAGIC_HEADER\n\
-    H3 = $UNDERLOAD_PACKET_MAGIC_HEADER\n\
-    H4 = $TRANSPORT_PACKET_MAGIC_HEADER\n\
-    I1 = $SPECIAL_JUNK_1\n\
-    I2 = $SPECIAL_JUNK_2\n\
-    I3 = $SPECIAL_JUNK_3\n\
-    I4 = $SPECIAL_JUNK_4\n\
-    I5 = $SPECIAL_JUNK_5\n\
+    Address = {REMOTE_ADDR_IPV4}/32\n\
+    DNS = {PRIMARY_DNS}, {SECONDARY_DNS}\n\
+    PrivateKey = {PEER_PRIVATE_KEY}\n\
+    Jc = {JUNK_PACKET_COUNT}\n\
+    Jmin = {JUNK_PACKET_MIN_SIZE}\n\
+    Jmax = {JUNK_PACKET_MAX_SIZE}\n\
+    S1 = {INIT_PACKET_JUNK_SIZE}\n\
+    S2 = {RESPONSE_PACKET_JUNK_SIZE}\n\
+    S3 = {COOKIE_REPLY_PACKET_JUNK_SIZE}\n\
+    S4 = {TRANSPORT_PACKET_JUNK_SIZE}\n\
+    H1 = {INIT_PACKET_MAGIC_HEADER}\n\
+    H2 = {RESPONSE_PACKET_MAGIC_HEADER}\n\
+    H3 = {UNDERLOAD_PACKET_MAGIC_HEADER}\n\
+    H4 = {TRANSPORT_PACKET_MAGIC_HEADER}\n\
+    I1 = {SPECIAL_JUNK_1}\n\
+    I2 = {SPECIAL_JUNK_2}\n\
+    I3 = {SPECIAL_JUNK_3}\n\
+    I4 = {SPECIAL_JUNK_4}\n\
+    I5 = {SPECIAL_JUNK_5}\n\
     \n\
     [Peer]\n\
     PublicKey = ${LOCAL_PUBLIC_KEY}\n\
     PresharedKey = ${LOCAL_SHARED_KEY}\n\
     AllowedIPs = 0.0.0.0/0, ::/0\n\
-    Endpoint = $SERVER_IP_ADDRESS:$AWG_SERVER_PORT\n\
+    Endpoint = {LOCAL_ADDR}:{LOCAL_PORT}\n\
     PersistentKeepalive = 25\n\
     " | sed -e 's/^\s\+//g' > ./wg0.peer.conf.template
 
