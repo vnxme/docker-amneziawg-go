@@ -32,15 +32,36 @@ RUN \
     git reset --hard "${TOOLS_COMMIT}"; \
     cd src; make; cd -
 
-FROM alpine:${ALPINE_VERSION}
-
-COPY --from=builder --chmod=0755 /app/go/amneziawg-go               /usr/bin/amneziawg-go
-COPY --from=builder --chmod=0755 /app/tools/src/wg                  /usr/bin/awg
-COPY --from=builder --chmod=0755 /app/tools/src/wg-quick/linux.bash /usr/bin/awg-quick
+WORKDIR /app/export
 
 RUN \
+    mkdir -p ./bin ./completion ./man; \
+    mv /app/go/amneziawg-go                               ./bin/amneziawg-go; \
+    mv /app/tools/src/wg                                  ./bin/awg; \
+    mv /app/tools/src/wg-quick/linux.bash                 ./bin/awg-quick; \
+    cp /app/tools/src/completion/wg.bash-completion       ./completion/awg; \
+    cp /app/tools/src/completion/wg-quick.bash-completion ./completion/awg-quick; \
+    cp /app/tools/src/man/wg.8                            ./man/awg.8; \
+    cp /app/tools/src/man/wg-quick.8                      ./man/awg-quick.8
+
+FROM alpine:${ALPINE_VERSION}
+
+COPY --from=builder /app/export /app/import
+
+WORKDIR /app
+
+RUN \
+    mkdir -p /etc/amnezia/amneziawg /usr/share/man/man8 /usr/share/bash-completion/completions; \
+    chmod 0700 /etc/amnezia/amneziawg; \
+    chmod 0755 ./import/bin/*; \
+    chmod 0644 ./import/completion/* ./import/man/*; \
+    mv ./import/bin/*        /usr/bin/; \
+    mv ./import/completion/* /usr/share/bash-completion/completions/; \
+    mv ./import/man/*        /usr/share/man/man8/; \
     ln -s /usr/bin/awg       /usr/bin/wg; \
-    ln -s /usr/bin/awg-quick /usr/bin/wg-quick
+    ln -s /usr/bin/awg-quick /usr/bin/wg-quick; \
+    rm -rf ./import; \
+    mkdir -p ./hooks/up ./hooks/down
 
 RUN EXTRAS=" \
     bash \
@@ -51,11 +72,11 @@ RUN EXTRAS=" \
     iptables-legacy \
     iputils-ping \
     libcap \
+    mandoc \
     net-tools \
     openssl \
     vlan \
-    "; apk add --update --no-cache --virtual .extras ${EXTRAS} && \
-    mkdir -p /app/hooks/up /app/hooks/down /etc/amnezia
+    "; apk add --update --no-cache --virtual .extras ${EXTRAS}
 
 RUN echo -e " \n\
     fs.file-max = 51200 \n\
@@ -89,8 +110,6 @@ RUN echo -e " \n\
     " | sed -e 's/^\s\+//g' | tee -a /etc/security/limits.conf
 
 COPY --chmod=0755 entrypoint.sh /app/
-
-WORKDIR /app
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["bash", "--", "/app/entrypoint.sh"]
