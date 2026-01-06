@@ -5,7 +5,7 @@ FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
 
 FROM --platform=$BUILDPLATFORM golang:${GOLANG_VERSION}-alpine AS builder
 
-RUN apk add clang lld git
+RUN apk add clang git lld linux-headers
 
 COPY --from=xx / /
 
@@ -38,7 +38,7 @@ ARG TOOLS_REPO=https://github.com/amnezia-vpn/amneziawg-tools
 
 # Ref: https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/.github/workflows/linux-build.yml
 RUN \
-    xx-apk add --update --no-cache build-base linux-headers; \
+    xx-apk add --update --no-cache build-base; \
     git clone --branch "${TOOLS_BRANCH}" "${TOOLS_REPO}" .; \
     git reset --hard "${TOOLS_COMMIT}"; \
     cd src; make; xx-verify ./wg
