@@ -40,9 +40,9 @@ WORKDIR /app/export
 # Ref: https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/src/Makefile
 RUN \
     mkdir -p bin com man; \
-    mv /app/go/amneziawg-go                               ./bin/amneziawg-go; \
-    mv /app/tools/src/wg                                  ./bin/awg; \
-    mv /app/tools/src/wg-quick/linux.bash                 ./bin/awg-quick; \
+    cp /app/go/amneziawg-go                               ./bin/amneziawg-go; \
+    cp /app/tools/src/wg                                  ./bin/awg; \
+    cp /app/tools/src/wg-quick/linux.bash                 ./bin/awg-quick; \
     cp /app/tools/src/completion/wg.bash-completion       ./com/awg; \
     cp /app/tools/src/completion/wg-quick.bash-completion ./com/awg-quick; \
     cp /app/tools/src/man/wg.8                            ./man/awg.8; \
