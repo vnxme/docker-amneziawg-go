@@ -6,13 +6,13 @@ if [ -z "${IFACE}" ]; then
     exit 1
 fi
 
-LOCAL_PRIVATE_KEY="$(wg genkey)"
+LOCAL_PRIVATE_KEY="$(awg genkey)"
 echo "${LOCAL_PRIVATE_KEY}" > "./${IFACE}_local_private.key"
 
-LOCAL_PUBLIC_KEY="$(echo "${LOCAL_PRIVATE_KEY}" | wg pubkey)"
+LOCAL_PUBLIC_KEY="$(echo "${LOCAL_PRIVATE_KEY}" | awg pubkey)"
 echo "${LOCAL_PUBLIC_KEY}" > "./${IFACE}_local_public.key"
 
-LOCAL_SHARED_KEY="$(wg genpsk)"
+LOCAL_SHARED_KEY="$(awg genpsk)"
 echo "${LOCAL_SHARED_KEY}" > "./${IFACE}_shared.key"
 
 # Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/configure_container.sh
