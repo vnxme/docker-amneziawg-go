@@ -1,9 +1,17 @@
 ARG ALPINE_VERSION=3.23.2
 ARG GOLANG_VERSION=1.25.5
 
-FROM golang:${GOLANG_VERSION}-alpine AS builder
+FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
 
-ARG TARGETARCH TARGETOS
+FROM --platform=$BUILDPLATFORM golang:${GOLANG_VERSION}-alpine AS builder
+
+RUN apk add clang lld
+
+COPY --from=xx / /
+
+ARG TARGETARCH TARGETOS TARGETPLATFORM
+
+RUN xx-info env
 
 WORKDIR /app/go
 
@@ -15,11 +23,12 @@ ARG GO_REPO=https://github.com/amnezia-vpn/amneziawg-go
 RUN \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
-    apk add --update --no-cache build-base git; \
+    xx-apk add --update --no-cache build-base git; \
     git clone --branch "${GO_BRANCH}" "${GO_REPO}" .; \
     git reset --hard "${GO_COMMIT}"; \
     CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
-    go build -trimpath -ldflags '-s -w -linkmode external -extldflags "-fno-PIC -static"' -v -o ./amneziawg-go
+    xx-go build -trimpath -ldflags '-s -w -linkmode external -extldflags "-fno-PIC -static"' -v -o ./amneziawg-go .b; \
+    xx-verify ./amneziawg-go
 
 WORKDIR /app/tools
 
@@ -29,10 +38,10 @@ ARG TOOLS_REPO=https://github.com/amnezia-vpn/amneziawg-tools
 
 # Ref: https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/.github/workflows/linux-build.yml
 RUN \
-    apk add --update --no-cache build-base git linux-headers; \
+    xx-apk add --update --no-cache build-base git linux-headers; \
     git clone --branch "${TOOLS_BRANCH}" "${TOOLS_REPO}" .; \
     git reset --hard "${TOOLS_COMMIT}"; \
-    cd src; make; cd -
+    cd src; make; xx-verify ./wg
 
 WORKDIR /app/export
 
