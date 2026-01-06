@@ -3,6 +3,8 @@ ARG GOLANG_VERSION=1.25.5
 
 FROM golang:${GOLANG_VERSION}-alpine AS builder
 
+ARG TARGETARCH TARGETOS
+
 WORKDIR /app/go
 
 ARG GO_BRANCH=master
@@ -10,15 +12,11 @@ ARG GO_COMMIT=449d7cffd4adf86971bd679d0be5384b443e8be5
 ARG GO_REPO=https://github.com/amnezia-vpn/amneziawg-go
 
 RUN \
+    --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg \
     apk add --update --no-cache build-base git; \
     git clone --branch "${GO_BRANCH}" "${GO_REPO}" .; \
     git reset --hard "${GO_COMMIT}"
-
-ARG TARGETARCH TARGETOS
-
-RUN \
-    --mount=type=cache,target=/root/.cache/go-build \
-    --mount=type=cache,target=/go/pkg \
     CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags '-s -w -linkmode external -extldflags "-fno-PIC -static"' -v -o ./amneziawg-go
 
