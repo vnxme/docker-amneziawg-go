@@ -41,7 +41,7 @@ RUN set -eux && \
     xx-apk add --update --no-cache build-base && \
     git clone --branch "${TOOLS_BRANCH}" "${TOOLS_REPO}" . && \
     git reset --hard "${TOOLS_COMMIT}" && \
-    cd src && make && xx-verify ./wg
+    cd src && CC=xx-clang make && xx-verify ./wg
 
 WORKDIR /app/export
 
