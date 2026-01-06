@@ -160,7 +160,7 @@ launch() {
 
 	# Launch one or multiple awg instances
 	if [ -n "$(which awg)" ] && [ -n "$(which awg-quick)" ] && [ -n "$(which amneziawg-go)" ]; then
-		local FILE="${AWG_CONFIG:-/etc/amnezia/wg0.conf}"
+		local FILE="${AWG_CONFIG:-/etc/amnezia/amneziawg/wg0.conf}"
 		if [ -s "${FILE}" ]; then
 			awg-quick up "${FILE}" || true
 			TUNS+=("${FILE}")
