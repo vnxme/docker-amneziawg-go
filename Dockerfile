@@ -43,7 +43,7 @@ RUN \
     xx-apk add --update --no-cache build-base linux-headers && \
     git clone --branch "${TOOLS_BRANCH}" "${TOOLS_REPO}" . && \
     git reset --hard "${TOOLS_COMMIT}" && \
-    cd src && CC=xx-clang make && \
+    cd src && CC="xx-clang --static" make && \
     xx-verify --static ./wg
 
 WORKDIR /app/export
