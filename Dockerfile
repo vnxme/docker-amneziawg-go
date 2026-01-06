@@ -27,7 +27,7 @@ ARG TOOLS_COMMIT=5c6ffd6168f7c69199200a91803fa02e1b8c4152
 ARG TOOLS_REPO=https://github.com/amnezia-vpn/amneziawg-tools
 
 RUN \
-    apk add --update --no-cache linux-headers; \
+    apk add --update --no-cache build-base git linux-headers; \
     git clone --branch "${TOOLS_BRANCH}" "${TOOLS_REPO}" .; \
     git reset --hard "${TOOLS_COMMIT}"; \
     cd src; make; cd -
