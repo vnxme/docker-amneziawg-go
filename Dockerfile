@@ -5,13 +5,11 @@ FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
 
 FROM --platform=$BUILDPLATFORM golang:${GOLANG_VERSION}-alpine AS builder
 
-RUN apk add build-base clang git lld
+RUN apk --update --no-cache add build-base clang git lld
 
 COPY --from=xx / /
 
 ARG TARGETARCH TARGETOS TARGETPLATFORM TARGETVARIANT
-
-RUN xx-info env
 
 WORKDIR /app/go
 
@@ -19,16 +17,18 @@ ARG GO_BRANCH=master
 ARG GO_COMMIT=449d7cffd4adf86971bd679d0be5384b443e8be5
 ARG GO_REPO=https://github.com/amnezia-vpn/amneziawg-go
 
+# Ref: https://github.com/tonistiigi/xx/blob/v1.9.0/README.md
 # Ref: https://github.com/amnezia-vpn/amneziawg-go/blob/v0.2.16/Dockerfile
 RUN \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
-    xx-apk add --update --no-cache build-base; \
-    git clone --branch "${GO_BRANCH}" "${GO_REPO}" .; \
-    git reset --hard "${GO_COMMIT}"; \
+    xx-info env && \
+    xx-apk add --update --no-cache build-base && \
+    git clone --branch "${GO_BRANCH}" "${GO_REPO}" . && \
+    git reset --hard "${GO_COMMIT}" && \
     CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
-    xx-go build -trimpath -ldflags '-s -w -linkmode external -extldflags "-fno-PIC -static"' -v -o ./amneziawg-go; \
-    xx-verify ./amneziawg-go
+    xx-go build -trimpath -ldflags '-s -w -linkmode external -extldflags "-fno-PIC -static"' -v -o ./amneziawg-go && \
+    xx-verify --static ./amneziawg-go
 
 WORKDIR /app/tools
 
@@ -36,25 +36,28 @@ ARG TOOLS_BRANCH=master
 ARG TOOLS_COMMIT=5c6ffd6168f7c69199200a91803fa02e1b8c4152
 ARG TOOLS_REPO=https://github.com/amnezia-vpn/amneziawg-tools
 
+# Ref: https://github.com/tonistiigi/xx/blob/v1.9.0/README.md
 # Ref: https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/.github/workflows/linux-build.yml
-RUN set -eux && \
+RUN \
+    xx-info env && \
     xx-apk add --update --no-cache build-base linux-headers && \
     git clone --branch "${TOOLS_BRANCH}" "${TOOLS_REPO}" . && \
     git reset --hard "${TOOLS_COMMIT}" && \
-    cd src && CC=xx-clang make && xx-verify ./wg
+    cd src && CC=xx-clang make && \
+    xx-verify --static ./wg
 
 WORKDIR /app/export
 
 # Ref: https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/.github/workflows/linux-build.yml
 # Ref: https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/src/Makefile
 RUN \
-    mkdir -p bin com man; \
-    cp /app/go/amneziawg-go                               ./bin/amneziawg-go; \
-    cp /app/tools/src/wg                                  ./bin/awg; \
-    cp /app/tools/src/wg-quick/linux.bash                 ./bin/awg-quick; \
-    cp /app/tools/src/completion/wg.bash-completion       ./com/awg; \
-    cp /app/tools/src/completion/wg-quick.bash-completion ./com/awg-quick; \
-    cp /app/tools/src/man/wg.8                            ./man/awg.8; \
+    mkdir -p bin com man && \
+    cp /app/go/amneziawg-go                               ./bin/amneziawg-go && \
+    cp /app/tools/src/wg                                  ./bin/awg && \
+    cp /app/tools/src/wg-quick/linux.bash                 ./bin/awg-quick && \
+    cp /app/tools/src/completion/wg.bash-completion       ./com/awg && \
+    cp /app/tools/src/completion/wg-quick.bash-completion ./com/awg-quick && \
+    cp /app/tools/src/man/wg.8                            ./man/awg.8 && \
     cp /app/tools/src/man/wg-quick.8                      ./man/awg-quick.8
 
 FROM alpine:${ALPINE_VERSION}
@@ -83,13 +86,13 @@ COPY --from=builder --chmod=0644 /app/export/man/* /usr/share/man/man8/
 # Ref: https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/.github/workflows/linux-build.yml
 # Ref: https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/src/Makefile
 RUN \
-    ln -s /usr/bin/awg                                     /usr/bin/wg; \
-    ln -s /usr/bin/awg-quick                               /usr/bin/wg-quick; \
-    ln -s /usr/share/man/man8/awg.8                        /usr/share/man/man8/wg.8; \
-    ln -s /usr/share/man/man8/awg-quick.8                  /usr/share/man/man8/wg-quick.8; \
-    ln -s /usr/share/bash-completion/completions/awg       /usr/share/bash-completion/completions/wg; \
-    ln -s /usr/share/bash-completion/completions/awg-quick /usr/share/bash-completion/completions/wg-quick; \
-    mkdir -p /etc/amnezia/amneziawg; \
+    ln -s /usr/bin/awg                                     /usr/bin/wg && \
+    ln -s /usr/bin/awg-quick                               /usr/bin/wg-quick && \
+    ln -s /usr/share/man/man8/awg.8                        /usr/share/man/man8/wg.8 && \
+    ln -s /usr/share/man/man8/awg-quick.8                  /usr/share/man/man8/wg-quick.8 && \
+    ln -s /usr/share/bash-completion/completions/awg       /usr/share/bash-completion/completions/wg && \
+    ln -s /usr/share/bash-completion/completions/awg-quick /usr/share/bash-completion/completions/wg-quick && \
+    mkdir -p /etc/amnezia/amneziawg && \
     chmod 0700 /etc/amnezia/amneziawg
 
 #Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/Dockerfile
