@@ -3,14 +3,14 @@ ARG GOLANG_VERSION=1.25.5
 
 FROM golang:${GOLANG_VERSION}-alpine AS builder
 
+WORKDIR /app/go
+
 ARG GO_BRANCH=master
 ARG GO_COMMIT=449d7cffd4adf86971bd679d0be5384b443e8be5
 ARG GO_REPO=https://github.com/amnezia-vpn/amneziawg-go
 
 RUN apk add --update --no-cache build-base git; \
-    git clone --branch "${GO_BRANCH}" "${GO_REPO}" /app; cd /app; git reset --hard "${GO_COMMIT}"
-
-WORKDIR /app
+    git clone --branch "${GO_BRANCH}" "${GO_REPO}" /app/go; git reset --hard "${GO_COMMIT}"
 
 ARG TARGETARCH TARGETOS
 
