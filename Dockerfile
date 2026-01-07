@@ -1,7 +1,8 @@
 ARG ALPINE_VERSION=3.23.2
 ARG GOLANG_VERSION=1.25.5
+ARG XXTOOL_VERSION=1.9.0
 
-FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
+FROM --platform=$BUILDPLATFORM tonistiigi/xx:${XXTOOL_VERSION} AS xx
 
 FROM --platform=$BUILDPLATFORM golang:${GOLANG_VERSION}-alpine AS builder
 
