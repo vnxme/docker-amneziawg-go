@@ -1,3 +1,10 @@
+# Refenreces:
+# https://github.com/tonistiigi/xx/blob/v1.9.0/README.md
+# https://github.com/amnezia-vpn/amneziawg-go/blob/v0.2.16/Dockerfile
+# https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/.github/workflows/linux-build.yml
+# https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/src/Makefile
+# https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/Dockerfile
+
 ARG ALPINE_VERSION=3.23.2
 ARG GOLANG_VERSION=1.25.5
 ARG XXTOOL_VERSION=1.9.0
@@ -18,8 +25,6 @@ ARG GO_BRANCH=master
 ARG GO_COMMIT=449d7cffd4adf86971bd679d0be5384b443e8be5
 ARG GO_REPO=https://github.com/amnezia-vpn/amneziawg-go
 
-# Ref: https://github.com/tonistiigi/xx/blob/v1.9.0/README.md
-# Ref: https://github.com/amnezia-vpn/amneziawg-go/blob/v0.2.16/Dockerfile
 RUN \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
@@ -37,8 +42,6 @@ ARG TOOLS_BRANCH=master
 ARG TOOLS_COMMIT=5c6ffd6168f7c69199200a91803fa02e1b8c4152
 ARG TOOLS_REPO=https://github.com/amnezia-vpn/amneziawg-tools
 
-# Ref: https://github.com/tonistiigi/xx/blob/v1.9.0/README.md
-# Ref: https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/.github/workflows/linux-build.yml
 RUN \
     xx-info env && \
     xx-apk add --update --no-cache build-base linux-headers && \
@@ -49,8 +52,6 @@ RUN \
 
 WORKDIR /app/export
 
-# Ref: https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/.github/workflows/linux-build.yml
-# Ref: https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/src/Makefile
 RUN \
     mkdir -p bin com man && \
     cp /app/go/amneziawg-go                               ./bin/amneziawg-go && \
@@ -84,8 +85,6 @@ COPY --from=builder --chmod=0755 /app/export/bin/* /usr/bin/
 COPY --from=builder --chmod=0644 /app/export/com/* /usr/share/bash-completion/completions/
 COPY --from=builder --chmod=0644 /app/export/man/* /usr/share/man/man8/
 
-# Ref: https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/.github/workflows/linux-build.yml
-# Ref: https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/src/Makefile
 RUN \
     ln -s /usr/bin/awg                                     /usr/bin/wg && \
     ln -s /usr/bin/awg-quick                               /usr/bin/wg-quick && \
@@ -96,7 +95,6 @@ RUN \
     mkdir -p /etc/amnezia/amneziawg && \
     chmod 0700 /etc/amnezia/amneziawg
 
-#Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/Dockerfile
 RUN echo -e " \n\
     fs.file-max = 51200 \n\
     \n\
