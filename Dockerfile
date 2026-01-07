@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Refenreces:
+# References:
 # https://github.com/tonistiigi/xx/blob/v1.9.0/README.md
 # https://github.com/amnezia-vpn/amneziawg-go/blob/v0.2.16/Dockerfile
 # https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/.github/workflows/linux-build.yml
