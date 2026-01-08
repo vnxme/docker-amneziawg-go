@@ -103,8 +103,8 @@ terminate() {
 	exit 0
 }
 
-# Call terminate() when SIGTERM is received
-trap terminate TERM
+# Call terminate() when SIGINT or SIGTERM is received
+trap terminate INT TERM
 
 # Call launch() with command line arguments
 launch $@
