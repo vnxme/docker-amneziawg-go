@@ -14,6 +14,8 @@
 # Note: if ${AWG_CONFIG} doesn't exist, but its directory does,
 # the script runs `awg-quick up` with each *.conf found in this directory.
 
+HOOKS_DIR="${HOOKS_DIR:-./hooks}"
+
 PIDS=()
 TUNS=()
 
@@ -127,10 +129,10 @@ forwarding_down() {
 }
 
 hooks() {
-	[ ! -d "/app/hooks/$1" ] && mkdir -p "/app/hooks/$1"
-	local FILE; for FILE in /app/hooks/$1/*.sh; do
+	[ ! -d "${HOOKS_DIR}/$1" ] && mkdir -p "${HOOKS_DIR}/$1"
+	local FILE; for FILE in "${HOOKS_DIR}"/"$1"/*.sh; do
 		if [ -s "${FILE}" ]; then
-			/bin/bash "${FILE}" || true
+			/bin/bash -- "${FILE}" || true
 		fi
 	done
 }
@@ -140,8 +142,8 @@ launch() {
 	firewall_up
 	forwarding_up
 
-	# Call up hooks
-	hooks "up"
+	# Call pre-up hooks
+	hooks "pre-up"
 
 	# Launch one or multiple awg instances
 	if [ -n "$(which awg)" ] && [ -n "$(which awg-quick)" ] && [ -n "$(which amneziawg-go)" ]; then
@@ -171,9 +173,15 @@ launch() {
 	# Launch one empty process to keep this script running
 	tail -f /dev/null &
 	PIDS+=($!)
+
+	# Call post-up hooks
+	hooks "post-up"
 }
 
 terminate() {
+	# Call pre-down hooks
+	hooks "pre-down"
+
 	# Disable all tunnels
 	local TUN; for TUN in "${TUNS[@]}"; do
 		awg-quick down "${TUN}" || true
@@ -184,8 +192,8 @@ terminate() {
 		kill "${PID}" 2>/dev/null || true
 	done
 
-	# Call down hooks
-	hooks "down"
+	# Call post-down hooks
+	hooks "post-down"
 
 	# Restore firewall and forwarding
 	forwarding_down
