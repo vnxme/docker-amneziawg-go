@@ -91,7 +91,6 @@ RUN DEPS=" \
     mandoc \
     net-tools \
     openssl \
-    vlan \
     "; \
     apk add --update --no-cache --virtual .deps ${DEPS}
 
