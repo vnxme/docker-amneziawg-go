@@ -19,9 +19,6 @@ new() {
 	local LOCAL_PUBLIC_KEY="$(echo "${LOCAL_PRIVATE_KEY}" | awg pubkey)"
 	echo "${LOCAL_PUBLIC_KEY}" > "./${IFACE}/local_public.key"
 
-	local REMOTE_PRESHARED_KEY="$(awg genpsk)"
-	echo "${REMOTE_PRESHARED_KEY}" > "./${IFACE}/peer_preshared.key"
-
 	# Refer to the following documents for the recommended values:
 	# https://docs.amnezia.org/documentation/amnezia-wg/
 	# https://github.com/amnezia-vpn/amneziawg-go/blob/v0.2.16/README.md
@@ -147,6 +144,33 @@ new() {
 	EOF
 }
 
+peer() {
+	local IFACE="$1"
+	local REMOTE_NAME="$2"
+
+	local REMOTE_PRIVATE_KEY="$(awg genkey)"
+	# echo "${REMOTE_PRIVATE_KEY}" > "./${IFACE}/remote_private.key"
+
+	local REMOTE_PUBLIC_KEY="$(echo "${REMOTE_PRIVATE_KEY}" | awg pubkey)"
+	# echo "${REMOTE_PUBLIC_KEY}" > "./${IFACE}/remote_public.key"
+
+	local REMOTE_PRESHARED_KEY="$(awg genpsk)"
+	# echo "${REMOTE_PRESHARED_KEY}" > "./${IFACE}/remote_preshared.key"
+
+	cat "./${IFACE}/remote.conf.template" \
+	| sed "s/{REMOTE_PRIVATE_KEY}/${REMOTE_PRIVATE_KEY}/g" \
+	| sed "s/{REMOTE_PRESHARED_KEY}/${REMOTE_PRESHARED_KEY}/g" \
+	> "./${IFACE}/${REMOTE_NAME}.conf"
+
+	cat "./${IFACE}/peer.conf.template" \
+	| sed "s/{REMOTE_NAME}/${REMOTE_NAME}/g" \
+	| sed "s/{REMOTE_PUBLIC_KEY}/${REMOTE_PUBLIC_KEY}/g" \
+	| sed "s/{REMOTE_PRESHARED_KEY}/${REMOTE_PRESHARED_KEY}/g" \
+	>> ".{IFACE}.conf"
+}
+
 if [ "$1" == "new" ]; then
 	new "$2"
+elif [ "$1" == "peer" ]; then
+	peer "$2" "$3"
 fi
