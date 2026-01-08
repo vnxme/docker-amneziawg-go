@@ -92,7 +92,8 @@ RUN DEPS=" \
     net-tools \
     openssl \
     "; \
-    apk add --update --no-cache --virtual .deps ${DEPS}; \
+    apk add --update --no-cache --virtual .deps ${DEPS} && \
+    mkdir -p /usr/share/man/man8 /usr/share/bash-completion/completions && \
     ln -s /usr/bin/awg                                     /usr/bin/wg && \
     ln -s /usr/bin/awg-quick                               /usr/bin/wg-quick && \
     ln -s /usr/share/man/man8/awg.8                        /usr/share/man/man8/wg.8 && \
