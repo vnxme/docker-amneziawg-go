@@ -28,19 +28,19 @@ The following **extra software packages** are included as well:
 
 The container images are based on [Alpine](https://hub.docker.com/_/alpine). The repository uses [Golang](https://hub.docker.com/_/golang) for multi-stage build and the [XX helpers](https://hub.docker.com/r/tonistiigi/xx) for AMD64-based cross-compilation. Below is a summary of the platforms supported by this repository and its dependencies.
 
-| OS/Arch        | Alpine | Golang | XX  | AmneziaWG-Go |
-|----------------|--------|--------|-----|--------------|
-| linux/386      | Yes    | Yes    | Yes | Yes          |
-| linux/amd64    | Yes    | Yes    | Yes | Yes          |
-| linux/arm/v5   | No     | No     | Yes | No           |
-| linux/arm/v6   | Yes    | Yes    | Yes | Yes          |
-| linux/arm/v7   | Yes    | Yes    | Yes | Yes          |
-| linux/arm64    | Yes    | Yes    | Yes | Yes          |
-| linux/loong64  | No     | No     | Yes | No           |
-| linux/mips     | No     | No     | Yes | No           |
-| linux/mips64   | No     | No     | Yes | No           |
-| linux/mips64le | No     | No     | Yes | No           |
-| linux/mipsle   | No     | No     | Yes | No           |
-| linux/ppc64le  | Yes    | Yes    | Yes | Yes          |
-| linux/riscv64  | Yes    | Yes    | Yes | Yes          |
-| linux/s390x    | Yes    | Yes    | Yes | Yes          |
+| OS/Arch        | Alpine | Golang | XX Helpers  | AmneziaWG-Go |
+|----------------|--------|--------|-------------|--------------|
+| linux/386      | Yes    | Yes    | Yes         | Yes          |
+| linux/amd64    | Yes    | Yes    | Yes         | Yes          |
+| linux/arm/v5   | No     | No     | Yes         | No           |
+| linux/arm/v6   | Yes    | Yes    | Yes         | Yes          |
+| linux/arm/v7   | Yes    | Yes    | Yes         | Yes          |
+| linux/arm64    | Yes    | Yes    | Yes         | Yes          |
+| linux/loong64  | No     | No     | Yes         | No           |
+| linux/mips     | No     | No     | Yes         | No           |
+| linux/mips64   | No     | No     | Yes         | No           |
+| linux/mips64le | No     | No     | Yes         | No           |
+| linux/mipsle   | No     | No     | Yes         | No           |
+| linux/ppc64le  | Yes    | Yes    | Yes         | Yes          |
+| linux/riscv64  | Yes    | Yes    | Yes         | Yes          |
+| linux/s390x    | Yes    | Yes    | Yes         | Yes          |
