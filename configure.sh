@@ -1,75 +1,152 @@
 #!/bin/bash
 
-IFACE="$1"
-if [ -z "${IFACE}" ]; then
-    echo "Error: an interface name must be provided. Exiting."
-    exit 1
+new() {
+	local IFACE="$1"
+	if [ -z "${IFACE}" ]; then
+		echo "$(basename -- "$0"): Error: An interface name must be provided. Exiting"
+		exit 1
+	fi
+	if [ -s "./${IFACE}.conf" ] || [ -d "./${IFACE}" ]; then
+		echo "$(basename -- "$0"): Error: The interface name already exists. Exiting"
+		exit 1
+	fi
+
+	mkdir -p "./${IFACE}"
+
+	local LOCAL_PRIVATE_KEY="$(awg genkey)"
+	echo "${LOCAL_PRIVATE_KEY}" > "./${IFACE}/local_private.key"
+
+	local LOCAL_PUBLIC_KEY="$(echo "${LOCAL_PRIVATE_KEY}" | awg pubkey)"
+	echo "${LOCAL_PUBLIC_KEY}" > "./${IFACE}/local_public.key"
+
+	local REMOTE_PRESHARED_KEY="$(awg genpsk)"
+	echo "${REMOTE_PRESHARED_KEY}" > "./${IFACE}/peer_preshared.key"
+
+	# Refer to the following documents for the recommended values:
+	# https://docs.amnezia.org/documentation/amnezia-wg/
+	# https://github.com/amnezia-vpn/amneziawg-go/blob/v0.2.16/README.md
+	# https://github.com/amnezia-vpn/amneziawg-linux-kernel-module/blob/v1.0.20251104/README.md
+
+	# Jc, Jmin, Jmax
+	# 0 ≤ Jc ≤ 128; recommended range is [4;12]
+	# Jmin < Jmax ≤ 1280; recommended values are 8 and 80
+	# Values 0,*,* ensure compliance with vanilla WireGuard implementations
+	local JUNK_PACKET_COUNT="$(shuf -i 4-12 -n 1)"
+	local JUNK_PACKET_MIN_SIZE="8"
+	local JUNK_PACKET_MAX_SIZE="80"
+
+	# S1, S2, S3, S4
+	# 0 ≤ S1 ≤ 1132 (1280 - 148 = 1132); recommended range is [15; 150]
+	# 0 ≤ S2 ≤ 1188 (1280 -  92 = 1188); recommended range is [15; 150]
+	# 0 ≤ S3 ≤ 1216 (1280 -  64 = 1216); recommended range is [15; 150]
+	# S2 + (148 - 92) ≠ S1; S3 + (92 - 64) ≠ S2; S3 + (148 - 64) ≠ S1
+	# Values 0,0,0,0 ensure compliance with vanilla WireGuard implementations
+	local JUNK_SIZES=()
+	local JUNK_SIZE
+	while [ "${#JUNK_SIZES[@]}" -lt 3 ]; do
+		JUNK_SIZE="$(shuf -i 15-150 -n 1)"
+		if [ "${#JUNK_SIZES[@]}" -eq 1 ]; then
+			if [ "$(( JUNK_SIZE + 56 ))" -eq "${JUNK_SIZES[0]}" ]; then
+				continue
+			fi
+		elif [ "${#JUNK_SIZES[@]}" -eq 2 ]; then
+			if [ "$(( JUNK_SIZE + 28 ))" -eq "${JUNK_SIZES[1]}" ]; then
+				continue
+			fi
+			if [ "$(( JUNK_SIZE + 84 ))" -eq "${JUNK_SIZES[0]}" ]; then
+				continue
+			fi
+		fi
+		JUNK_SIZES+=("${JUNK_SIZE}")
+	done
+	local INIT_PACKET_JUNK_SIZE="${JUNK_SIZES[0]}" 
+	local RESPONSE_PACKET_JUNK_SIZE="${JUNK_SIZES[1]}"
+	local COOKIE_REPLY_PACKET_JUNK_SIZE="${JUNK_SIZES[2]}"
+	local TRANSPORT_PACKET_JUNK_SIZE="0"
+	
+	# H1, H2, H3, H4
+	# Must be a set of 4 unique numbers; recommended range is [5; 2147483647]
+	# Values 1,2,3,4 ensure compliance with vanilla WireGuard implementations
+	local MAGIC_HEADERS=()
+	local MAGIC_HEADER
+	local UINT32
+	while [ "${#MAGIC_HEADERS[@]}" -lt 4 ]; do
+		UINT32="$(openssl rand 4 | od -vAn -tu4 -vAn | tr -d ' ')"
+		if [ "${UINT32}" -lt 5 ] || [ "${UINT32}" -gt 2147483647 ]; then
+			continue
+		fi
+		for MAGIC_HEADER in ${MAGIC_HEADERS[@]}; do
+			if [ "${UINT32}" -eq "${MAGIC_HEADER}" ]; then
+				continue 2
+			fi
+		done
+		MAGIC_HEADERS+=("${UINT32}")
+	done
+	local INIT_PACKET_MAGIC_HEADER="${MAGIC_HEADERS[0]}"
+	local RESPONSE_PACKET_MAGIC_HEADER="${MAGIC_HEADERS[1]}"
+	local UNDERLOAD_PACKET_MAGIC_HEADER="${MAGIC_HEADERS[2]}"
+	local TRANSPORT_PACKET_MAGIC_HEADER="${MAGIC_HEADERS[3]}"
+
+	# Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/configure_container.sh
+	cat <<-EOF > "./${IFACE}.conf"
+	[Interface]
+	PrivateKey = ${LOCAL_PRIVATE_KEY}
+	Address = {LOCAL_ADDR_IPV4}/{LOCAL_MASK_IPV4}, {LOCAL_ADDR_IPV6}/{LOCAL_MASK_IPV6}
+	ListenPort = {LOCAL_PORT}
+	Jc = ${JUNK_PACKET_COUNT}
+	Jmin = ${JUNK_PACKET_MIN_SIZE}
+	Jmax = ${JUNK_PACKET_MAX_SIZE}
+	S1 = ${INIT_PACKET_JUNK_SIZE}
+	S2 = ${RESPONSE_PACKET_JUNK_SIZE}
+	S3 = ${COOKIE_REPLY_PACKET_JUNK_SIZE}
+	S4 = ${TRANSPORT_PACKET_JUNK_SIZE}
+	H1 = ${INIT_PACKET_MAGIC_HEADER}
+	H2 = ${RESPONSE_PACKET_MAGIC_HEADER}
+	H3 = ${UNDERLOAD_PACKET_MAGIC_HEADER}
+	H4 = ${TRANSPORT_PACKET_MAGIC_HEADER}
+	EOF
+
+	# Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/template.conf
+	cat <<-EOF > "./${IFACE}/remote.conf.template"
+	[Interface]
+	Address = {REMOTE_ADDR_IPV4}/32, {REMOTE_ADDR_IPV6}/128
+	DNS = {PRIMARY_DNS}, {SECONDARY_DNS}
+	PrivateKey = {REMOTE_PRIVATE_KEY}
+	Jc = ${JUNK_PACKET_COUNT}
+	Jmin = ${JUNK_PACKET_MIN_SIZE}
+	Jmax = ${JUNK_PACKET_MAX_SIZE}
+	S1 = ${INIT_PACKET_JUNK_SIZE}
+	S2 = ${RESPONSE_PACKET_JUNK_SIZE}
+	S3 = ${COOKIE_REPLY_PACKET_JUNK_SIZE}
+	S4 = ${TRANSPORT_PACKET_JUNK_SIZE}
+	H1 = ${INIT_PACKET_MAGIC_HEADER}
+	H2 = ${RESPONSE_PACKET_MAGIC_HEADER}
+	H3 = ${UNDERLOAD_PACKET_MAGIC_HEADER}
+	H4 = ${TRANSPORT_PACKET_MAGIC_HEADER}
+	# I1 = {SPECIAL_JUNK_1}
+	# I2 = {SPECIAL_JUNK_2}
+	# I3 = {SPECIAL_JUNK_3}
+	# I4 = {SPECIAL_JUNK_4}
+	# I5 = {SPECIAL_JUNK_5}
+
+	[Peer]
+	PublicKey = ${LOCAL_PUBLIC_KEY}
+	PresharedKey = {REMOTE_PRESHARED_KEY}
+	AllowedIPs = 0.0.0.0/0, ::/0
+	Endpoint = {LOCAL_ADDR}:{LOCAL_PORT}
+	PersistentKeepalive = 25
+	EOF
+
+	cat <<-EOF > "./${IFACE}/peer.conf.template"
+	# {REMOTE_NAME}
+	[Peer]
+	PublicKey = {REMOTE_PUBLIC_KEY}
+	PresharedKey = {REMOTE_PRESHARED_KEY}
+	AllowedIPs = {REMOTE_ADDR_IPV4}/32, {REMOTE_ADDR_IPV6}/128
+	PersistentKeepalive = 25
+	EOF
+}
+
+if [ "$1" == "new" ]; then
+	new "$2"
 fi
-
-LOCAL_PRIVATE_KEY="$(awg genkey)"
-echo "${LOCAL_PRIVATE_KEY}" > "./${IFACE}_local_private.key"
-
-LOCAL_PUBLIC_KEY="$(echo "${LOCAL_PRIVATE_KEY}" | awg pubkey)"
-echo "${LOCAL_PUBLIC_KEY}" > "./${IFACE}_local_public.key"
-
-REMOTE_PRESHARED_KEY="$(awg genpsk)"
-echo "${REMOTE_PRESHARED_KEY}" > "./${IFACE}_peer_preshared.key"
-
-# Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/configure_container.sh
-cat <<EOF > "./${IFACE}.conf"
-[Interface]
-PrivateKey = ${LOCAL_PRIVATE_KEY}
-Address = {LOCAL_ADDR_IPV4}/{LOCAL_MASK_IPV4}, {LOCAL_ADDR_IPV6}/{LOCAL_MASK_IPV6}
-ListenPort = {LOCAL_PORT}
-Jc = {JUNK_PACKET_COUNT}
-Jmin = {JUNK_PACKET_MIN_SIZE}
-Jmax = {JUNK_PACKET_MAX_SIZE}
-S1 = {INIT_PACKET_JUNK_SIZE}
-S2 = {RESPONSE_PACKET_JUNK_SIZE}
-S3 = {COOKIE_REPLY_PACKET_JUNK_SIZE}
-S4 = {TRANSPORT_PACKET_JUNK_SIZE}
-H1 = {INIT_PACKET_MAGIC_HEADER}
-H2 = {RESPONSE_PACKET_MAGIC_HEADER}
-H3 = {UNDERLOAD_PACKET_MAGIC_HEADER}
-H4 = {TRANSPORT_PACKET_MAGIC_HEADER}
-EOF
-
-# Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/template.conf
-cat <<EOF > "./${IFACE}_remote.conf.template"
-[Interface]
-Address = {REMOTE_ADDR_IPV4}/32, {REMOTE_ADDR_IPV6}/128
-DNS = {PRIMARY_DNS}, {SECONDARY_DNS}
-PrivateKey = {REMOTE_PRIVATE_KEY}
-Jc = {JUNK_PACKET_COUNT}
-Jmin = {JUNK_PACKET_MIN_SIZE}
-Jmax = {JUNK_PACKET_MAX_SIZE}
-S1 = {INIT_PACKET_JUNK_SIZE}
-S2 = {RESPONSE_PACKET_JUNK_SIZE}
-S3 = {COOKIE_REPLY_PACKET_JUNK_SIZE}
-S4 = {TRANSPORT_PACKET_JUNK_SIZE}
-H1 = {INIT_PACKET_MAGIC_HEADER}
-H2 = {RESPONSE_PACKET_MAGIC_HEADER}
-H3 = {UNDERLOAD_PACKET_MAGIC_HEADER}
-H4 = {TRANSPORT_PACKET_MAGIC_HEADER}
-I1 = {SPECIAL_JUNK_1}
-I2 = {SPECIAL_JUNK_2}
-I3 = {SPECIAL_JUNK_3}
-I4 = {SPECIAL_JUNK_4}
-I5 = {SPECIAL_JUNK_5}
-
-[Peer]
-PublicKey = ${LOCAL_PUBLIC_KEY}
-PresharedKey = {REMOTE_PRESHARED_KEY}
-AllowedIPs = 0.0.0.0/0, ::/0
-Endpoint = {LOCAL_ADDR}:{LOCAL_PORT}
-PersistentKeepalive = 25
-EOF
-
-cat <<EOF > "./${IFACE}_peer.conf.template"
-# {REMOTE_NAME}
-[Peer]
-PublicKey = {REMOTE_PUBLIC_KEY}
-PresharedKey = {REMOTE_PRESHARED_KEY}
-AllowedIPs = {REMOTE_ADDR_IPV4}/32, {REMOTE_ADDR_IPV6}/128
-PersistentKeepalive = 25
-EOF
