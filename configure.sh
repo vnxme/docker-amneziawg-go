@@ -33,6 +33,8 @@ new() {
 	local LOCAL_PUBLIC_KEY="$(echo "${LOCAL_PRIVATE_KEY}" | awg pubkey)"
 	echo "${LOCAL_PUBLIC_KEY}" > "./${IFACE}/local_public.key"
 
+	local LOCAL_PORT="$(shuf -i 1024-49151 -n 1)"
+
 	# Refer to the following documents for the recommended values:
 	# https://docs.amnezia.org/documentation/amnezia-wg/
 	# https://github.com/amnezia-vpn/amneziawg-go/blob/v0.2.16/README.md
@@ -103,7 +105,7 @@ new() {
 	[Interface]
 	PrivateKey = ${LOCAL_PRIVATE_KEY}
 	Address = {LOCAL_ADDR_IPV4}/{LOCAL_MASK_IPV4}, {LOCAL_ADDR_IPV6}/{LOCAL_MASK_IPV6}
-	ListenPort = {LOCAL_PORT}
+	ListenPort = ${LOCAL_PORT}
 	Jc = ${JUNK_PACKET_COUNT}
 	Jmin = ${JUNK_PACKET_MIN_SIZE}
 	Jmax = ${JUNK_PACKET_MAX_SIZE}
@@ -144,7 +146,7 @@ new() {
 	PublicKey = ${LOCAL_PUBLIC_KEY}
 	PresharedKey = {REMOTE_PRESHARED_KEY}
 	AllowedIPs = 0.0.0.0/0, ::/0
-	Endpoint = {LOCAL_ADDR}:{LOCAL_PORT}
+	Endpoint = {LOCAL_ADDR}:${LOCAL_PORT}
 	PersistentKeepalive = 25
 	EOF
 
