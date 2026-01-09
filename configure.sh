@@ -371,9 +371,19 @@ peer() {
 	fi
 
 	local LOCAL_ADDRESSES=($(cat "./${IFACE}.conf" | grep -E "^Address = " | tr -s ' ,' ' ' | cut -d' ' -f 3-))
-	local REMOTE_N="$(($(find "./${IFACE}" -type f -name "*.conf" | wc -l) + 2))"
-	local REMOTE_IPV4_ADDR="$(get_nth_ipv4 "${LOCAL_ADDRESSES[0]}" "${REMOTE_N}")"
-	local REMOTE_IPV6_ADDR="$(get_nth_ipv6 "${LOCAL_ADDRESSES[1]}" "${REMOTE_N}")"
+	local REMOTE_N=$(($(find "./${IFACE}" -type f -name "*.conf" | wc -l) + 1))
+	while true; do
+		REMOTE_N=$((REMOTE_N + 1))
+		local REMOTE_IPV4_ADDR="$(get_nth_ipv4 "${LOCAL_ADDRESSES[0]}" "${REMOTE_N}")"
+		local REMOTE_IPV6_ADDR="$(get_nth_ipv6 "${LOCAL_ADDRESSES[1]}" "${REMOTE_N}")"
+		if [ -n "$(cat "./${IFACE}.conf" | grep -F "${REMOTE_IPV4_ADDR}")" ]; then
+			continue
+		fi
+		if [ -n "$(cat "./${IFACE}.conf" | grep -F "${REMOTE_IPV6_ADDR}")" ]; then
+			continue
+		fi
+		break
+	done
 
 	local REMOTE_PRIVATE_KEY="$(awg genkey)"
 	# echo "${REMOTE_PRIVATE_KEY}" > "./${IFACE}/remote_private.key"
