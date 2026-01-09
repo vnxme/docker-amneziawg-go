@@ -53,4 +53,4 @@ The entrypoint (`/app/entrypoint.sh`) has four pre-defined hooks:
 - **pre-down** for any scripts to run before tunnels are disabled;
 - **post-down** for any scripts to run after tunnels are disabled.
 
-By default, these scripts (`*.sh`) must be placed in the `/app/hooks/{pre-up,post-up,pre-down,post-down}` directories which are created automatically if missing. The `/app` part of the path may be overriden with the `-w` (or `--workdir`) flag of the `docker run` command, and the intermediate part of the path may be set the `-e` (or `--env`) flag of the `docker run` command by adjusting the `HOOK_DIR` environment variable which equals `./hooks` if empty.
+By default, these scripts (`*.sh`) must be placed in the `/app/hooks/{pre-up,post-up,pre-down,post-down}` directories which are created automatically if missing. The `/app` part of the path may be overriden with the `-w` (or `--workdir`) flag of the `docker run` command, and the intermediate part of the path may be set with the `-e` (or `--env`) flag of the `docker run` command by adjusting the `HOOK_DIR` environment variable which equals `./hooks` if empty.
