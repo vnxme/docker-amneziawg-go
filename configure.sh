@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+DNS=("1.1.1.1" "1.0.0.1" "2606:4700:4700::1111" "2606:4700:4700::1001")
+
 # Ref: https://filipenf.github.io/2015/12/06/bash-calculating-ip-addresses/
 # Receives an IPv4/mask parameter and returns the nth IPv4 in that range
 get_nth_ipv4() {
@@ -82,15 +84,15 @@ new() {
 	# Obtain a local public IPv4 via the ipify API, or get the address of the interface used for internet access
 	local LOCAL_ADDR="$(curl -s https://api.ipify.org)"
 	if [ $? -ne 0 ]; then
-		LOCAL_ADDR="$(ip route get "1.1.1.1" | head -1 | awk '{print $7}')"
+		LOCAL_ADDR="$(ip route get "${DNS[0]}" | head -1 | awk '{print $7}')"
 	fi
 
 	# Obtain IPv4 and IPv6 default route interfaces
-	local LOCAL_IPV4_IFACE="${ip route get "1.1.1.1" | head -1 | awk '{print $5}'}"
+	local LOCAL_IPV4_IFACE="${ip route get "${DNS[0]}" | head -1 | awk '{print $5}'}"
 	if [ -z "${LOCAL_IPV4_IFACE}" ] || [ -n "$(ifconfig "${LOCAL_IPV4_IFACE}" | grep 'not found')" ]; then
 		LOCAL_IPV4_IFACE="eth0"
 	fi
-	local LOCAL_IPV6_IFACE="${ip route get "2606:4700:4700::1111" | head -1 | awk '{print $5}'}"
+	local LOCAL_IPV6_IFACE="${ip route get "${DNS[2]}" | head -1 | awk '{print $5}'}"
 	if [ -z "${LOCAL_IPV6_IFACE}" ] || [ -n "$(ifconfig "${LOCAL_IPV6_IFACE}" | grep 'not found')" ]; then
 		LOCAL_IPV6_IFACE="${LOCAL_IPV4_IFACE}"
 	fi
@@ -259,6 +261,8 @@ peer() {
 	# echo "${REMOTE_PRESHARED_KEY}" > "./${IFACE}/remote_preshared.key"
 
 	cat "./${IFACE}/remote.conf.template" \
+	| sed "s/{PRIMARY_DNS}/${DNS[0]}/g" \
+	| sed "s/{SECONDARY_DNS}/${DNS[1]}/g" \
 	| sed "s/{REMOTE_PRIVATE_KEY}/${REMOTE_PRIVATE_KEY}/g" \
 	| sed "s/{REMOTE_PRESHARED_KEY}/${REMOTE_PRESHARED_KEY}/g" \
 	> "./${IFACE}/${REMOTE_NAME}.conf"
