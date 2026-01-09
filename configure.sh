@@ -79,6 +79,12 @@ new() {
 		break
 	done
 
+	# Obtain a local public IPv4 via the ipify API, or get the address of the interface used for internet access
+	local LOCAL_ADDR="$(curl -s https://api.ipify.org)"
+	if [ $? -ne 0 ]; then
+		LOCAL_ADDR="$(ip route get 1.1.1.1 | head -1 | awk '{print $7}')"
+	fi
+
 	# Refer to the following documents for the recommended values:
 	# https://docs.amnezia.org/documentation/amnezia-wg/
 	# https://github.com/amnezia-vpn/amneziawg-go/blob/v0.2.16/README.md
@@ -190,7 +196,7 @@ new() {
 	PublicKey = ${LOCAL_PUBLIC_KEY}
 	PresharedKey = {REMOTE_PRESHARED_KEY}
 	AllowedIPs = 0.0.0.0/0, ::/0
-	Endpoint = {LOCAL_ADDR}:${LOCAL_PORT}
+	Endpoint = ${LOCAL_ADDR}:${LOCAL_PORT}
 	PersistentKeepalive = 25
 	EOF
 
