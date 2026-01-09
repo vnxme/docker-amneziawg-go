@@ -88,11 +88,11 @@ new() {
 	fi
 
 	# Obtain IPv4 and IPv6 default route interfaces
-	local LOCAL_IPV4_IFACE="${ip route get "${DNS[0]}" | head -1 | awk '{print $5}'}"
+	local LOCAL_IPV4_IFACE="$(ip route get "${DNS[0]}" | head -1 | awk '{print $5}')"
 	if [ -z "${LOCAL_IPV4_IFACE}" ] || [ -n "$(ifconfig "${LOCAL_IPV4_IFACE}" | grep 'not found')" ]; then
 		LOCAL_IPV4_IFACE="eth0"
 	fi
-	local LOCAL_IPV6_IFACE="${ip route get "${DNS[2]}" | head -1 | awk '{print $5}'}"
+	local LOCAL_IPV6_IFACE="$(ip route get "${DNS[2]}" | head -1 | awk '{print $5}')"
 	if [ -z "${LOCAL_IPV6_IFACE}" ] || [ -n "$(ifconfig "${LOCAL_IPV6_IFACE}" | grep 'not found')" ]; then
 		LOCAL_IPV6_IFACE="${LOCAL_IPV4_IFACE}"
 	fi
