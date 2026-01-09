@@ -36,6 +36,104 @@ get_nth_ipv4() {
 	printf "%d.%d.%d.%d\n" "$((i1 & m1))" "$((i2 & m2))" "$((i3 & m3))" "$(($2 + (i4 & m4)))"
 }
 
+# Composed by ChatGPT, to be used with caution
+# Receives an IPv6/mask parameter and returns the nth IPv6 in that range
+get_nth_ipv6() {
+	# Usage:
+	#   get_nth_ipv6 "2001:db8:abcd::1/73" 42
+
+	local addr prefix offset=$2
+	addr=${1%/*}
+	prefix=${1#*/}
+
+	########################################
+	# Expand :: to full 8-hextet form
+	########################################
+	local left right
+	if [[ $addr == *::* ]]; then
+		left=${addr%%::*}
+		right=${addr##*::}
+
+		read -ra L <<< "${left//:/ }"
+		read -ra R <<< "${right//:/ }"
+
+		local missing=$((8 - ${#L[@]} - ${#R[@]}))
+		addr=$(printf "%s:" "${L[@]}")
+		addr+=$(printf "0:%.0s" $(seq 1 $missing))
+		addr+=$(printf "%s:" "${R[@]}")
+		addr=${addr%:}
+	fi
+
+	########################################
+	# Parse hextets
+	########################################
+	local h
+	IFS=":" read -ra h <<< "$addr"
+	for i in {0..7}; do
+		h[$i]=$((16#${h[$i]:-0}))
+	done
+
+	########################################
+	# Apply prefix mask
+	########################################
+	local full=$((prefix / 16))
+	local rem=$((prefix % 16))
+
+	# Zero full host hextets
+	for ((i=full+1; i<8; i++)); do
+		h[$i]=0
+	done
+
+	# Mask partial hextet
+	if (( rem > 0 && full < 8 )); then
+		local mask=$((0xffff << (16 - rem) & 0xffff))
+		h[$full]=$((h[$full] & mask))
+	fi
+
+	########################################
+	# Add offset (128-bit carry)
+	########################################
+	h[7]=$((h[7] + offset))
+	for ((i=7; i>0; i--)); do
+		if (( h[$i] > 0xffff )); then
+			h[$i]=$((h[$i] & 0xffff))
+			h[$((i-1))]=$((h[$((i-1))] + 1))
+		fi
+	done
+
+	########################################
+	# Convert to compressed IPv6 output
+	########################################
+	local out longest_start=-1 longest_len=0
+	local cur_start=-1 cur_len=0
+
+	for i in {0..8}; do
+		if (( i < 8 && h[$i] == 0 )); then
+			(( cur_len++ ))
+			(( cur_start == -1 )) && cur_start=$i
+		else
+			if (( cur_len > longest_len )); then
+				longest_len=$cur_len
+				longest_start=$cur_start
+			fi
+			cur_len=0
+			cur_start=-1
+		fi
+	done
+
+	for i in {0..7}; do
+		if (( i == longest_start && longest_len > 1 )); then
+			out+="::"
+			i=$((i + longest_len - 1))
+			continue
+		fi
+		[[ $out && ${out: -1} != : ]] && out+=":"
+		out+=$(printf "%x" "${h[$i]}")
+	done
+
+	echo "${out/#:/::}"
+}
+
 new() {
 	local IFACE="$1"
 	if [ -z "${IFACE}" ]; then
@@ -65,7 +163,7 @@ new() {
 	local LOCAL_IPV6_BYTES="$(echo "${LOCAL_PUBLIC_KEY}" | base64 -d | dd bs=1 count=7 skip=1 status=none | xxd -p)"
 	local LOCAL_IPV6_NET="fd${LOCAL_IPV6_BYTES:0:2}:${LOCAL_IPV6_BYTES:2:4}:${LOCAL_IPV6_BYTES:6:4}:${LOCAL_IPV6_BYTES:10:4}::"
 	local LOCAL_IPV6_MASK="$((128 - (32 - LOCAL_IPV4_MASK)))" # Make IPv4 and IPv6 subnets equally sized
-	local LOCAL_IPV6_ADDR="${LOCAL_IPV6_NET}$(printf '%x' 1)"
+	local LOCAL_IPV6_ADDR="$(get_nth_ipv6 "${LOCAL_IPV6_NET}/${LOCAL_IPV6_MASK}" 1)"
 
 	# Choose a local port from the registered/user ports, skip the ports that are already in use
 	local LOCAL_PORTS_IN_USE="$(netstat -ln --udp | tr -s ' ' | cut -d' ' -f4 | rev | cut -d':' -f1 | rev | tail +3 | sort -u)"
@@ -251,6 +349,11 @@ peer() {
 	local IFACE="$1"
 	local REMOTE_NAME="$2"
 
+	local LOCAL_ADDRESSES=($(cat "./${IFACE}.conf" | grep -E "^Address = " | tr -s ' ,' ' ' | cut -d' ' -f 3-))
+	local REMOTE_N="$(($(find "./${IFACE}" -type f -name "*.conf" | wc -l) + 2))"
+	local REMOTE_IPV4_ADDR="$(get_nth_ipv4 "${LOCAL_ADDRESSES[0]}" "${REMOTE_N}")"
+	local REMOTE_IPV6_ADDR="$(get_nth_ipv6 "${LOCAL_ADDRESSES[1]}" "${REMOTE_N}")"
+
 	local REMOTE_PRIVATE_KEY="$(awg genkey)"
 	# echo "${REMOTE_PRIVATE_KEY}" > "./${IFACE}/remote_private.key"
 
@@ -260,18 +363,25 @@ peer() {
 	local REMOTE_PRESHARED_KEY="$(awg genpsk)"
 	# echo "${REMOTE_PRESHARED_KEY}" > "./${IFACE}/remote_preshared.key"
 
-	cat "./${IFACE}/remote.conf.template" \
-	| sed "s/{PRIMARY_DNS}/${DNS[0]}/g" \
-	| sed "s/{SECONDARY_DNS}/${DNS[1]}/g" \
-	| sed "s/{REMOTE_PRIVATE_KEY}/${REMOTE_PRIVATE_KEY}/g" \
-	| sed "s/{REMOTE_PRESHARED_KEY}/${REMOTE_PRESHARED_KEY}/g" \
-	> "./${IFACE}/${REMOTE_NAME}.conf"
+	{
+		cat "./${IFACE}/remote.conf.template" \
+		| sed "s/{PRIMARY_DNS}/${DNS[0]}/g" \
+		| sed "s/{SECONDARY_DNS}/${DNS[1]}/g" \
+		| sed "s,{REMOTE_PRIVATE_KEY},${REMOTE_PRIVATE_KEY},g" \
+		| sed "s,{REMOTE_PRESHARED_KEY},${REMOTE_PRESHARED_KEY},g" \
+		| sed "s/{REMOTE_IPV4_ADDR}/${REMOTE_IPV4_ADDR}/g" \
+		| sed "s/{REMOTE_IPV6_ADDR}/${REMOTE_IPV6_ADDR}/g"
+	} > "./${IFACE}/${REMOTE_NAME}.conf"
 
-	cat "./${IFACE}/peer.conf.template" \
-	| sed "s/{REMOTE_NAME}/${REMOTE_NAME}/g" \
-	| sed "s/{REMOTE_PUBLIC_KEY}/${REMOTE_PUBLIC_KEY}/g" \
-	| sed "s/{REMOTE_PRESHARED_KEY}/${REMOTE_PRESHARED_KEY}/g" \
-	>> ".{IFACE}.conf"
+	{
+		echo "" # Add an empty line before the peer block
+		cat "./${IFACE}/peer.conf.template" \
+		| sed "s/{REMOTE_NAME}/${REMOTE_NAME}/g" \
+		| sed "s,{REMOTE_PUBLIC_KEY},${REMOTE_PUBLIC_KEY},g" \
+		| sed "s,{REMOTE_PRESHARED_KEY},${REMOTE_PRESHARED_KEY},g" \
+		| sed "s/{REMOTE_IPV4_ADDR}/${REMOTE_IPV4_ADDR}/g" \
+		| sed "s/{REMOTE_IPV6_ADDR}/${REMOTE_IPV6_ADDR}/g" 
+	} >> "./${IFACE}.conf"
 }
 
 if [ "$1" == "new" ]; then
