@@ -69,7 +69,7 @@ launch() {
 		done
 
 		if [ ${#FILES[@]} -eq 0 ] && [ -d "${CONF_DIR}" ]; then
-			if [ -n "$(find "${CONF_DIR}" -maxdepth 0 -type d -empty)" ]; then
+			if [ "$(find "${CONF_DIR}" -maxdepth 1 -type f -name "*.conf" | wc -l)" -eq 0 ]; then
 				cd -- "${CONF_DIR}" && bash -- /app/configure.sh new "${CONF_DEF}" && cd -
 			fi
 
