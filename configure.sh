@@ -65,8 +65,19 @@ new() {
 	local LOCAL_IPV6_MASK="$((128 - (32 - LOCAL_IPV4_MASK)))" # Make IPv4 and IPv6 subnets equally sized
 	local LOCAL_IPV6_ADDR="${LOCAL_IPV6_NET}$(printf '%x' 1)"
 
-	# Choose a local port from the registered/user ports
-	local LOCAL_PORT="$(shuf -i 1024-49151 -n 1)"
+	# Choose a local port from the registered/user ports, skip the ports that are already in use
+	local LOCAL_PORTS_IN_USE="$(netstat -ln --udp | tr -s ' ' | cut -d' ' -f4 | rev | cut -d':' -f1 | rev | tail +3 | sort -u)"
+	local LOCAL_PORT_IN_USE
+	local LOCAL_PORT
+	while true; do
+		LOCAL_PORT="$(shuf -i 1024-49151 -n 1)"
+		for LOCAL_PORT_IN_USE in "${LOCAL_PORTS_IN_USE[@]}"; do
+			if [ "${LOCAL_PORT_IN_USE}" -eq "${LOCAL_PORT}" ]; then
+				continue 2
+			fi
+		done
+		break
+	done
 
 	# Refer to the following documents for the recommended values:
 	# https://docs.amnezia.org/documentation/amnezia-wg/
