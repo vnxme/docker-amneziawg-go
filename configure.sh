@@ -236,8 +236,8 @@ new() {
 	EOF
 
 	cat <<-EOF > "./${IFACE}/peer.conf.template"
-	# {REMOTE_NAME}
 	[Peer]
+	# Name = {REMOTE_NAME}
 	PublicKey = {REMOTE_PUBLIC_KEY}
 	PresharedKey = {REMOTE_PRESHARED_KEY}
 	AllowedIPs = {REMOTE_IPV4_ADDR}/32, {REMOTE_IPV6_ADDR}/128
