@@ -344,6 +344,19 @@ server_add() {
 	EOF
 }
 
+server_del() {
+	if [ -z "${IFACE}" ]; then
+		echo "$(basename -- "$0"): Error: An interface name must be provided. Exiting"
+		exit 1
+	fi
+	if [ ! -s "./${IFACE}.conf" ] || [ ! -d "./${IFACE}" ]; then
+		echo "$(basename -- "$0"): Error: The interface must exist. Exiting"
+		exit 1
+	fi
+
+	rm -- "./${IFACE}.conf" && rm -rf -- "./${IFACE}"
+}
+
 server_mod_client_add() {
 	if [ -z "${IFACE}" ]; then
 		echo "$(basename -- "$0"): Error: An interface name must be provided. Exiting"
@@ -424,6 +437,11 @@ case "$1" in
 				shift
 				[ $# -eq 0 ] && echo "Error: Not enough arguments. Exiting." && exit 1
 				server_add "$@"
+				;;
+			d | del | delete)
+				shift
+				[ $# -eq 0 ] && echo "Error: Not enough arguments. Exiting." && exit 1
+				server_del "$@"
 				;;
 			m | mod | modify)
 				shift
