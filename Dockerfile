@@ -98,7 +98,7 @@ RUN DEPS=" \
     ln -s /usr/share/man/man8/awg-quick.8                  /usr/share/man/man8/wg-quick.8 && \
     ln -s /usr/share/bash-completion/completions/awg       /usr/share/bash-completion/completions/wg && \
     ln -s /usr/share/bash-completion/completions/awg-quick /usr/share/bash-completion/completions/wg-quick && \
-    mkdir -p /etc/amnezia/amneziawg && \
+    mkdir -p /etc/amnezia/amneziawg /var/log/amneziawg && \
     chmod 0700 /etc/amnezia/amneziawg
 
 COPY --from=builder --chmod=0644 /app/export/com/* /usr/share/bash-completion/completions/

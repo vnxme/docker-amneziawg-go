@@ -53,3 +53,9 @@ The entrypoint (`/app/entrypoint.sh`) has four pre-defined hooks:
 - **post-down** for any scripts to run after tunnels are disabled.
 
 By default, these scripts (`*.sh`) must be placed in the `/app/hooks/{pre-up,post-up,pre-down,post-down}` directories which are created automatically if missing. The `/app` part of the path may be overriden with the `-w` (or `--workdir`) flag of the `docker run` command, and the intermediate part of the path may be set with the `-e` (or `--env`) flag of the `docker run` command by adjusting the `HOOK_DIR` environment variable which equals `./hooks` if empty.
+
+## Logs
+
+The entrypoint supports 6 log levels: `fatal`, `error`, `warn`, `info`, `debug`, and `trace`. The default log level is `info`. Adjust the `LOG_LEVEL` environment variable to set the desired log level. If the `fatal` log level is set, no messages are expected to be shown, so the container will be (almost) completely silent. If the `trace` log level is set, the entrypoint prints outputs and exit codes of various subcommands in addition to its own messages. All messages are written to stdout.
+
+The `awg`, `awg-quick` and `amneziawg-go` executables are normally verbose. The entrypoint redirects anything they output to `${LOG_DIR}/${INTERFACE}.log` files. If the `LOG_DIR` environment variable is empty, the `/var/log/amneziawg` directory is used by default.
