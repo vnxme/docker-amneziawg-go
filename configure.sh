@@ -134,7 +134,7 @@ get_nth_ipv6() {
 	echo "${out/#:/::}"
 }
 
-new() {
+server_add() {
 	local IFACE="$1"
 	if [ -z "${IFACE}" ]; then
 		echo "$(basename -- "$0"): Error: An interface name must be provided. Exiting"
@@ -344,8 +344,7 @@ new() {
 	EOF
 }
 
-peer() {
-	local IFACE="$1"
+server_mod_client_add() {
 	if [ -z "${IFACE}" ]; then
 		echo "$(basename -- "$0"): Error: An interface name must be provided. Exiting"
 		exit 1
@@ -359,7 +358,7 @@ peer() {
 		exit 1
 	fi
 
-	local REMOTE_NAME="$2"
+	local REMOTE_NAME="$1"
 	if [ -z "${REMOTE_NAME}" ]; then
 		echo "$(basename -- "$0"): Error: A peer name must be provided. Exiting"
 		exit 1
@@ -414,8 +413,50 @@ peer() {
 	} >> "./${IFACE}.conf"
 }
 
-if [ "$1" == "new" ]; then
-	new "$2"
-elif [ "$1" == "peer" ]; then
-	peer "$2" "$3"
-fi
+# Parse positional arguments. Exit immidiately, if some arguments are missing
+[ $# -le 2 ] && echo "Error: Not enough arguments. Exiting." && exit 1
+case "$1" in
+	s | server)
+		shift
+		[ $# -le 1 ] && echo "Error: Not enough arguments. Exiting." && exit 1
+		case "$1" in
+			a | add)
+				shift
+				[ $# -eq 0 ] && echo "Error: Not enough arguments. Exiting." && exit 1
+				server_add "$@"
+				;;
+			m | mod | modify)
+				shift
+				IFACE="$1"
+				shift
+				[ $# -le 2 ] && echo "Error: Not enough arguments. Exiting." && exit 1
+				case "$1" in
+					c | client)
+						shift
+						case "$1" in
+							a | add)
+								shift
+								[ $# -eq 0 ] && echo "Error: Not enough arguments. Exiting." && exit 1
+								server_mod_client_add "$@"
+								;;
+							*)
+								exit 1
+								;;
+						esac
+						;;
+					*)
+						exit 1
+						;;
+				esac
+				;;
+			*)
+				exit 1
+				;;
+		esac
+		;;
+	*)
+		exit 1
+		;;
+esac
+
+exit 0

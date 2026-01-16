@@ -239,10 +239,10 @@ launch() {
 		if [ "${#FILES[@]}" -eq 0 ] && [ -d "${CONF_DIR}" ]; then
 			if [ "$(find "${CONF_DIR}" -maxdepth 1 -type f -name "*.conf" ! -size 0 | wc -l)" -eq 0 ]; then
 				log_debug "Generating a new configuration (${CONF_DIR}/${CONF_DEF}.conf)."
-				OUT="$(cd -- "${CONF_DIR}" || exit $?; /bin/bash -- /app/configure.sh new "${CONF_DEF}" 2>&1)"
+				OUT="$(cd -- "${CONF_DIR}" || exit $?; /bin/bash -- /app/configure.sh server add "${CONF_DEF}" 2>&1)"
 				RES="$?"
 				log_trace "${OUT}"
-				log_trace "Command \`cd -- \"${CONF_DIR}\" || exit \$?; /bin/bash -- /app/configure.sh new \"${CONF_DEF}\" 2>&1\` exited with status code ${RES}."
+				log_trace "Command \`cd -- \"${CONF_DIR}\" || exit \$?; /bin/bash -- /app/configure.sh server add \"${CONF_DEF}\" 2>&1\` exited with status code ${RES}."
 				if [ "${RES}" -gt 0 ]; then
 					log_error "Failed to generate a new configuration (${CONF_DIR}/${CONF_DEF}.conf). Exiting."
 					exit 1
