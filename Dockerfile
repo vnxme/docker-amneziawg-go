@@ -82,7 +82,6 @@ RUN DEPS=" \
     bash \
     bash-completion \
     curl \
-    dumb-init \
     iproute2 \
     iptables \
     iptables-legacy \
@@ -113,5 +112,5 @@ COPY --chmod=0755 *.sh /app/
 
 WORKDIR /app
 
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["bash", "--", "/app/entrypoint.sh"]
+ENTRYPOINT ["/bin/bash", "--", "/app/entrypoint.sh"]
+CMD []

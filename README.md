@@ -15,7 +15,6 @@ The container images include the following **key software packages**:
 The following **extra software packages** are included as well:
 - [bash](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/bash) and [bash-completion](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/bash-completion)
 - [curl](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/curl)
-- [dumb-init](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/dumb-init)
 - [iproute2](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/iproute2)
 - [iptables](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/iptables) and [iptables-legacy](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/iptables-legacy)
 - [iputils-ping](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/iputils-ping)
