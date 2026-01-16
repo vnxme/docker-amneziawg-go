@@ -13,7 +13,7 @@ The container images include the following **key software packages**:
 - [amneziawg-tools](https://github.com/amnezia-vpn/amneziawg-tools) provides `awg` and `awg-quick`
 
 The following **extra software packages** are included as well:
-- [bash](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/bash) and [bash-completion](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/bash-completion)
+- [bash](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/bash)
 - [curl](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/curl)
 - [iproute2](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/iproute2)
 - [iptables](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/iptables) and [iptables-legacy](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/iptables-legacy)

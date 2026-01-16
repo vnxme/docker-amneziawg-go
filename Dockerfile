@@ -80,7 +80,6 @@ FROM alpine:${ALPINE_VERSION}
 
 RUN DEPS=" \
     bash \
-    bash-completion \
     curl \
     iproute2 \
     iptables \
