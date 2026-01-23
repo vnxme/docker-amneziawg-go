@@ -219,18 +219,25 @@ launch() {
 		fi
 
 		local CONFS; IFS=',' read -r -a CONFS <<< "${CONF_RUN}"
-		local CONF; local FILE; for CONF in "${CONFS[@]}"; do
+		local CONF FILE PORT; for CONF in "${CONFS[@]}"; do
 			FILE="${CONF_DIR}/${CONF}.conf"
 			if [ -s "${FILE}" ]; then
 				log_debug "Enabling tunnel $(basename -- "${FILE%.*}") (${FILE})."
-				LOG="${LOG_DIR}/$(basename -- "${FILE%.*}").log"
+				LOG="${LOG_DIR}/${CONF}.log"
 				echo "--- UP   $(date +'%Y-%m-%d %H:%M:%S') ---" >> "${LOG}"
 				OUT="$(awg-quick up "${FILE}" >> "${LOG}" 2>&1)"
 				RES="$?"
 				log_trace "${OUT}"
 				log_trace "Command \`awg-quick up \"${FILE}\" >> \"${LOG}\" 2>&1\` exited with status code ${RES}."
 				if [ "${RES}" -gt 0 ]; then
-					log_warn "Failed to enable tunnel $(basename -- "${FILE%.*}") (${FILE})."
+					log_warn "Failed to enable tunnel ${CONF} (${FILE})."
+				else
+					PORT="$(awg show "${CONF}" listen-port)"
+					if [ "$?" -gt 0 ]; then
+						log_warn "Failed to fetch listen-port for tunnel ${CONF} (${FILE})."
+					else
+						log_info "Tunnel ${CONF} (${FILE}) is listening on UDP/${PORT}."
+					fi					
 				fi
 				FILES+=("${FILE}")
 			fi
@@ -249,7 +256,7 @@ launch() {
 				fi
 			fi
 
-			local FILE; for FILE in "${CONF_DIR}"/*.conf; do
+			for FILE in "${CONF_DIR}"/*.conf; do
 				if [ -s "${FILE}" ]; then
 					log_debug "Enabling tunnel $(basename -- "${FILE%.*}") (${FILE})."
 					LOG="${LOG_DIR}/$(basename -- "${FILE%.*}").log"
@@ -260,6 +267,13 @@ launch() {
 					log_trace "Command \`awg-quick up \"${FILE}\" >> \"${LOG}\" 2>&1\` exited with status code ${RES}."
 					if [ "${RES}" -gt 0 ]; then
 						log_warn "Failed to enable tunnel $(basename -- "${FILE%.*}") (${FILE})."
+					else
+						PORT="$(awg show "$(basename -- "${FILE%.*}")" listen-port)"
+						if [ "$?" -gt 0 ]; then
+							log_warn "Failed to fetch listen-port for tunnel $(basename -- "${FILE%.*}") (${FILE})."
+						else
+							log_info "Tunnel $(basename -- "${FILE%.*}") (${FILE}) is listening on UDP/${PORT}."
+						fi	
 					fi
 					FILES+=("${FILE}")
 				fi
@@ -306,15 +320,16 @@ terminate() {
 	done
 
 	# Terminate all subprocesses
-	local PID; for PID in "${PIDS[@]}"; do
+	local PID COMM; for PID in "${PIDS[@]}"; do
 		if [ -d "/proc/${PID}" ]; then
-			log_debug "Terminating process ${PID} ($(cat "/proc/${PID}/comm" 2>/dev/null || echo "unknown"))."
+			COMM="$(cat "/proc/${PID}/comm" 2>/dev/null || echo "unknown")"
+			log_debug "Terminating process ${PID} (${COMM})."
 			OUT="$(kill "${PID}" 2>&1)"
 			RES="$?"
 			log_trace "${OUT}"
 			log_trace "Command \`kill \"${PID}\" 2>&1\` exited with status code ${RES}."
 			if [ "${RES}" -gt 0 ]; then
-				log_warn "Failed to terminate process ${PID} ($(cat "/proc/${PID}/comm" 2>/dev/null || echo "unknown"))."
+				log_warn "Failed to terminate process ${PID} (${COMM})."
 			fi
 		fi
 	done
