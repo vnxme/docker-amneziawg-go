@@ -851,4 +851,5 @@ case "$1" in
 		;;
 esac
 
+log_info "Please restart the container to commit any changes to the tunnel configuration."
 exit 0
