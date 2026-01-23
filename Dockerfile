@@ -81,6 +81,7 @@ FROM alpine:${ALPINE_VERSION}
 RUN DEPS=" \
     bash \
     curl \
+    jq \
     iproute2 \
     iptables \
     iptables-legacy \

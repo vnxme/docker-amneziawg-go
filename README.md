@@ -18,6 +18,7 @@ The following **extra software packages** are included as well:
 - [iproute2](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/iproute2)
 - [iptables](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/iptables) and [iptables-legacy](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/iptables-legacy)
 - [iputils-ping](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/iputils-ping)
+- [jq](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/jq)
 - [libcap](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/libcap)
 - [mandoc](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/mandoc)
 - [net-tools](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/net-tools)
