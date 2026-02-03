@@ -297,16 +297,18 @@ generate_confs() {
 	local LOCAL_PUBLIC_KEY
 	local LOCAL_HOST
 	local LOCAL_PORT
+	local LOCAL_TABLE
 	local LOCAL_KEEPALIVE
 	read -r \
-		LOCAL_NAME LOCAL_PRIVATE_KEY LOCAL_PUBLIC_KEY LOCAL_HOST LOCAL_PORT LOCAL_KEEPALIVE \
+		LOCAL_NAME LOCAL_PRIVATE_KEY LOCAL_PUBLIC_KEY LOCAL_HOST LOCAL_PORT LOCAL_TABLE LOCAL_KEEPALIVE \
 		<<< "$(
 			jq -r '.peers."1" | [
-				.Name // "hub",
+				.Name // "peer1",
 				.PrivateKey // "#",
 				.PublicKey // "#",
 				.Host // "localhost",
 				.ListenPort // 0,
+				.Table // "auto",
 				.PersistentKeepalive // 0
 				] | join(" ")' < "${DB}"
 		)"
@@ -331,6 +333,7 @@ generate_confs() {
 	$([ "${LOCAL_PORT}" -gt 0 ] && echo "ListenPort = ${LOCAL_PORT}" || echo "# ListenPort =")
 	PrivateKey = ${LOCAL_PRIVATE_KEY}
 	Address = $(printf "%s, " "${LOCAL_ADDR[@]}" | sed 's/, $//')
+	Table = ${LOCAL_TABLE}
 	Jc = ${JUNK_PACKET_COUNT}
 	Jmin = ${JUNK_PACKET_MIN_SIZE}
 	Jmax = ${JUNK_PACKET_MAX_SIZE}
@@ -359,8 +362,11 @@ generate_confs() {
 	local REMOTE_PRESHARED_KEY
 	local REMOTE_HOST
 	local REMOTE_PORT
+	local REMOTE_TABLE
 	local REMOTE_KEEPALIVE
 	local REMOTE_ADDR=()
+	local REMOTE_IPS=()
+	local REMOTE_DNS=()
 	local REMOTE_FW1=()
 	local REMOTE_FW2=()
 	local REMOTE_FW3=()
@@ -369,7 +375,7 @@ generate_confs() {
 	local IDS=(); readarray -t IDS < <(jq -r '.peers | del(."1") | keys[]' < "${DB}" | grep -v '^$')
 	local ID; for ID in "${IDS[@]}"; do
 		read -r \
-			REMOTE_NAME REMOTE_PRIVATE_KEY REMOTE_PUBLIC_KEY REMOTE_PRESHARED_KEY REMOTE_HOST REMOTE_PORT REMOTE_KEEPALIVE \
+			REMOTE_NAME REMOTE_PRIVATE_KEY REMOTE_PUBLIC_KEY REMOTE_PRESHARED_KEY REMOTE_HOST REMOTE_PORT REMOTE_TABLE REMOTE_KEEPALIVE \
 			<<< "$(
 				jq -r --arg id "${ID}" '.peers."\($id)" | [
 					.Name // "peer\($id)",
@@ -378,12 +384,14 @@ generate_confs() {
 					.PresharedKey // "",
 					.Host // "#",
 					.ListenPort // 0,
+					.Table // "auto",
 					.PersistentKeepalive // 0
 					] | join(" ")' < "${DB}"
 			)"
 
 		readarray -t REMOTE_ADDR < <(jq -r --arg id "${ID}" '.peers."\($id)".Address // [] | join("\n")' < "${DB}" | grep -v '^$')
 		readarray -t REMOTE_IPS < <(jq -r --arg id "${ID}" '.peers."\($id)".AllowedIPs // [] | join("\n")' < "${DB}" | grep -v '^$')
+		readarray -t REMOTE_DNS < <(jq -r --arg id "${ID}" '.peers."\($id)".DNS // [] | join("\n")' < "${DB}" | grep -v '^$')
 		readarray -t REMOTE_FW1 < <(jq -r --arg id "${ID}" '.peers."\($id)".PreUp // [] | join("\n")' < "${DB}" | grep -v '^$')
 		readarray -t REMOTE_FW2 < <(jq -r --arg id "${ID}" '.peers."\($id)".PostUp // [] | join("\n")' < "${DB}" | grep -v '^$')
 		readarray -t REMOTE_FW3 < <(jq -r --arg id "${ID}" '.peers."\($id)".PreDown // [] | join("\n")' < "${DB}" | grep -v '^$')
@@ -397,7 +405,8 @@ generate_confs() {
 		$([ "${REMOTE_PORT}" -gt 0 ] && echo "ListenPort = ${REMOTE_PORT}" || echo "# ListenPort =")
 		PrivateKey = ${REMOTE_PRIVATE_KEY}
 		Address = $(printf "%s, " "${REMOTE_ADDR[@]}" | sed 's/, $//')
-		DNS = $(printf "%s, " "${DNS[@]}" | sed 's/, $//')
+		$([ "${#REMOTE_DNS[@]}" -gt 0 ] && echo "DNS = $(printf "%s, " "${REMOTE_DNS[@]}" | sed 's/, $//')" || echo "# DNS =")
+		Table = ${REMOTE_TABLE}
 		Jc = ${JUNK_PACKET_COUNT}
 		Jmin = ${JUNK_PACKET_MIN_SIZE}
 		Jmax = ${JUNK_PACKET_MAX_SIZE}
@@ -441,7 +450,7 @@ generate_confs() {
 	done
 }
 
-server_add() {
+local_add() {
 	mkdir -p "${CONF_DIR}/${IFACE}"
 
 	# Generate local private and public keys
@@ -449,17 +458,24 @@ server_add() {
 	LOCAL_PRIVATE_KEY="$(awg genkey)"
 	LOCAL_PUBLIC_KEY="$(echo "${LOCAL_PRIVATE_KEY}" | awg pubkey)"
 
-	# Choose a local 24-bit IPv4 subnet from the 192.168.0.0/16 block based on the first byte of the public key
-	local LOCAL_IPV4_BYTE LOCAL_IPV4_NET LOCAL_IPV4_MASK LOCAL_IPV4_ADDR
-	LOCAL_IPV4_BYTE="$(echo "${LOCAL_PUBLIC_KEY}" | base64 -d | dd bs=1 count=1 skip=0 status=none | xxd -p)"
-	LOCAL_IPV4_NET="192.168.$((16#${LOCAL_IPV4_BYTE})).0"
-	LOCAL_IPV4_MASK="24"
+	# Choose a local 24-bit (for PTMP) or 30-bit (for PTP) IPv4 subnet
+	# from the 192.168.0.0/16 block based on bytes [0:1] of the public key
+	local LOCAL_IPV4_BYTES LOCAL_IPV4_NET LOCAL_IPV4_MASK LOCAL_IPV4_ADDR
+	LOCAL_IPV4_BYTES="$(echo "${LOCAL_PUBLIC_KEY}" | base64 -d | dd bs=1 count=2 skip=0 status=none | xxd -p)"
+	if [ "${TOPO}" == "ptp" ]; then
+		LOCAL_IPV4_NET="192.168.$((16#${LOCAL_IPV4_BYTES:0:2})).$((0xfc & 0x${LOCAL_IPV4_BYTES:2:2}))"
+		LOCAL_IPV4_MASK="30"
+	else
+		LOCAL_IPV4_NET="192.168.$((16#${LOCAL_IPV4_BYTES:0:2})).0"
+		LOCAL_IPV4_MASK="24"
+	fi
 	LOCAL_IPV4_ADDR="$(get_nth_ipv4 "${LOCAL_IPV4_NET}/${LOCAL_IPV4_MASK}" 1)"
 
-	# Choose a local 64-bit IPv6 subnet from the fd00::/8 block based on bytes 1-8 of the public key
+	# Choose a local 64-bit (for both PTMP and PTP) IPv6 subnet
+	# from the fd00::/8 block based on bytes [1:7] of the public key
 	local LOCAL_IPV6_BYTES LOCAL_IPV6_NET LOCAL_IPV6_MASK LOCAL_IPV6_ADDR
 	LOCAL_IPV6_BYTES="$(echo "${LOCAL_PUBLIC_KEY}" | base64 -d | dd bs=1 count=7 skip=1 status=none | xxd -p)"
-	LOCAL_IPV6_NET="fd${LOCAL_IPV6_BYTES:0:2}:${LOCAL_IPV6_BYTES:2:4}:${LOCAL_IPV6_BYTES:6:4}:${LOCAL_IPV6_BYTES:10:4}::"
+	LOCAL_IPV6_NET="fd$(printf '%x' $((0x03 & 0x${LOCAL_IPV6_BYTES:0:2}))):${LOCAL_IPV6_BYTES:2:4}:${LOCAL_IPV6_BYTES:6:4}:${LOCAL_IPV6_BYTES:10:4}::"
 	LOCAL_IPV6_MASK="$((128 - (32 - LOCAL_IPV4_MASK)))" # Make IPv4 and IPv6 subnets equally sized
 	LOCAL_IPV6_ADDR="$(get_nth_ipv6 "${LOCAL_IPV6_NET}/${LOCAL_IPV6_MASK}" 1)"
 
@@ -568,6 +584,23 @@ server_add() {
 	local UNDERLOAD_PACKET_MAGIC_HEADER="${MAGIC_HEADERS[2]}"
 	local TRANSPORT_PACKET_MAGIC_HEADER="${MAGIC_HEADERS[3]}"
 
+	local LOCAL_IPS=()
+	local LOCAL_NAME
+	local LOCAL_TABLE
+	if [ "${TOPO}" == "ptmp" ]; then
+		LOCAL_IPS+=("0.0.0.0/0" "::/0")
+		LOCAL_NAME="hub"
+		LOCAL_TABLE="auto"
+	elif [ "${TOPO}" == "ptp" ]; then
+		LOCAL_IPS+=("0.0.0.0/1" "128.0.0.0/1" "::/1" "8000::/1")
+		LOCAL_NAME="${IFACE}"
+		LOCAL_TABLE="off"
+	else
+		LOCAL_IPS+=("${LOCAL_IPV4_ADDR}/32" "${LOCAL_IPV6_ADDR}/128")
+		LOCAL_NAME="undefined"
+		LOCAL_TABLE="auto"
+	fi
+
 	jq -n \
 		--argjson amnezia "$(
 			jq -n \
@@ -586,32 +619,45 @@ server_add() {
 		)" \
 		--argjson local "$(
 			jq -n \
+				--arg Name "${LOCAL_NAME}" \
 				--arg Host "${LOCAL_ADDR}" \
 				--argjson ListenPort "${LOCAL_PORT}" \
 				--arg PrivateKey "${LOCAL_PRIVATE_KEY}" \
 				--arg PublicKey "${LOCAL_PUBLIC_KEY}" \
 				--argjson Address "[\"${LOCAL_IPV4_ADDR}/${LOCAL_IPV4_MASK}\", \"${LOCAL_IPV6_ADDR}/${LOCAL_IPV6_MASK}\"]" \
-				--argjson AllowedIPs "[\"0.0.0.0/0\", \"::/0\"]" \
+				--argjson AllowedIPs "[$(printf "\"%s\", " "${LOCAL_IPS[@]}" | sed 's/, $//')]" \
+				--arg Table "${LOCAL_TABLE}" \
 				--argjson PersistentKeepalive "25" \
 				--argjson PreUp "$(\
-					cat <<-EOF | jq -R . | jq -s .
-					${IPT4} -t filter -A FORWARD -i %i -j ACCEPT || true
-					${IPT4} -t filter -A FORWARD -o %i -j ACCEPT || true
-					${IPT4} -t nat -A POSTROUTING -s ${LOCAL_IPV4_NET}/${LOCAL_IPV4_MASK} -o ${LOCAL_IPV4_IFACE} -j MASQUERADE || true
-					${IPT6} -t filter -A FORWARD -i %i -j ACCEPT || true
-					${IPT6} -t filter -A FORWARD -o %i -j ACCEPT || true
-					${IPT6} -t nat -A POSTROUTING -s ${LOCAL_IPV6_NET}/${LOCAL_IPV6_MASK} -o ${LOCAL_IPV6_IFACE} -j MASQUERADE || true
-					EOF
+					{
+						cat <<-EOF
+						ip -6 address add \$(printf "fe80::%04x:%04x:%04x:%04x/64" \$RANDOM \$RANDOM \$RANDOM \$RANDOM) dev %i || true
+						EOF
+						cat <<-EOF
+						${IPT4} -t filter -A FORWARD -i %i -j ACCEPT || true
+						${IPT4} -t filter -A FORWARD -o %i -j ACCEPT || true
+						${IPT6} -t filter -A FORWARD -i %i -j ACCEPT || true
+						${IPT6} -t filter -A FORWARD -o %i -j ACCEPT || true
+						EOF
+						[ "${TOPO}" == "ptmp" ] && cat <<-EOF
+						${IPT4} -t nat -A POSTROUTING -s ${LOCAL_IPV4_NET}/${LOCAL_IPV4_MASK} -o ${LOCAL_IPV4_IFACE} -j MASQUERADE || true
+						${IPT6} -t nat -A POSTROUTING -s ${LOCAL_IPV6_NET}/${LOCAL_IPV6_MASK} -o ${LOCAL_IPV6_IFACE} -j MASQUERADE || true
+						EOF
+					} | jq -R . | jq -s .
 				)" \
 				--argjson PostDown "$(\
-					cat <<-EOF | jq -R . | jq -s .
-					${IPT4} -t filter -D FORWARD -i %i -j ACCEPT || true
-					${IPT4} -t filter -D FORWARD -o %i -j ACCEPT || true
-					${IPT4} -t nat -D POSTROUTING -s ${LOCAL_IPV4_NET}/${LOCAL_IPV4_MASK} -o ${LOCAL_IPV4_IFACE} -j MASQUERADE || true
-					${IPT6} -t filter -D FORWARD -i %i -j ACCEPT || true
-					${IPT6} -t filter -D FORWARD -o %i -j ACCEPT || true
-					${IPT6} -t nat -D POSTROUTING -s ${LOCAL_IPV6_NET}/${LOCAL_IPV6_MASK} -o ${LOCAL_IPV6_IFACE} -j MASQUERADE || true
-					EOF
+					{
+						cat <<-EOF
+						${IPT4} -t filter -D FORWARD -i %i -j ACCEPT || true
+						${IPT4} -t filter -D FORWARD -o %i -j ACCEPT || true
+						${IPT6} -t filter -D FORWARD -i %i -j ACCEPT || true
+						${IPT6} -t filter -D FORWARD -o %i -j ACCEPT || true
+						EOF
+						[ "${TOPO}" == "ptmp" ] && cat <<-EOF
+						${IPT4} -t nat -D POSTROUTING -s ${LOCAL_IPV4_NET}/${LOCAL_IPV4_MASK} -o ${LOCAL_IPV4_IFACE} -j MASQUERADE || true
+						${IPT6} -t nat -D POSTROUTING -s ${LOCAL_IPV6_NET}/${LOCAL_IPV6_MASK} -o ${LOCAL_IPV6_IFACE} -j MASQUERADE || true
+						EOF
+					} | jq -R . | jq -s .
 				)" \
 				'$ARGS.named'
 		)" \
@@ -621,11 +667,11 @@ server_add() {
 		}' > "${CONF_DIR}/${IFACE}/${CONF_JSON}"
 }
 
-server_del() {
+local_del() {
 	rm -f -- "${CONF_DIR}/${IFACE}.conf" && rm -rf -- "${CONF_DIR}/${IFACE}"
 }
 
-server_mod_client_add() {
+local_mod_remote_add() {
 	# Return unless the database is a valid non-empty JSON file
 	local DB; DB="${CONF_DIR}/${IFACE}/${CONF_JSON}"
 	if [ ! -s "${DB}" ] ||  ! jq -e . >/dev/null 2>&1 < "${DB}"; then
@@ -633,18 +679,23 @@ server_mod_client_add() {
 	fi
 
 	local ID; ID="$(jq -r '.peers // {"1":{}} | keys | map(tonumber? // .) | max' < "${DB}")"; ID="$((ID+1))"
+	if [ "${TOPO}" == "ptp" ] && [ "${ID}" -gt 2 ]; then
+		return 1
+	fi
 
 	local LOCAL_ADDR=(); readarray -t LOCAL_ADDR < <(jq -r '.peers."1".Address // [] | join("\n")' < "${DB}" | grep -v '^$')
 	local REMOTE_ADDR=()
-	local REMOTE_IPS=()
+	local REMOTE_IPS=(); [ "${TOPO}" == "ptp" ] && REMOTE_IPS+=("0.0.0.0/1" "128.0.0.0/1" "::/1" "8000::/1")
+	local REMOTE_DNS=(); [ "${TOPO}" == "ptmp" ] && REMOTE_DNS+=("${DNS[@]}")
+	local REMOTE_TABLE; [ "${TOPO}" == "ptp" ] && REMOTE_TABLE="off" || REMOTE_TABLE="auto"
 	local ADDR CIDR MASK; for CIDR in "${LOCAL_ADDR[@]}"; do
 		MASK="${CIDR##*/}"; [ -z "${MASK}" ] && continue
 		if [[ "${CIDR}" == *":"* ]]; then
 			ADDR="$(get_nth_ipv6 "${CIDR}" "${ID}")"
-			REMOTE_IPS+=("${ADDR}/128")
+			[ "${TOPO}" == "ptmp" ] && REMOTE_IPS+=("${ADDR}/128")
 		else
 			ADDR="$(get_nth_ipv4 "${CIDR}" "${ID}")"
-			REMOTE_IPS+=("${ADDR}/32")
+			[ "${TOPO}" == "ptmp" ] && REMOTE_IPS+=("${ADDR}/32")
 		fi
 		REMOTE_ADDR+=("${ADDR}/${MASK}")
 	done
@@ -665,12 +716,37 @@ server_mod_client_add() {
 				--arg PresharedKey "${REMOTE_PRESHARED_KEY}" \
 				--argjson Address "[$(printf "\"%s\", " "${REMOTE_ADDR[@]}" | sed 's/, $//')]" \
 				--argjson AllowedIPs "[$(printf "\"%s\", " "${REMOTE_IPS[@]}" | sed 's/, $//')]" \
+				--argjson DNS "[$(printf "\"%s\", " "${REMOTE_DNS[@]}" | sed 's/, $//')]" \
+				--arg Table "${REMOTE_TABLE}" \
+				--argjson PreUp "$(\
+					{
+						[ "${TOPO}" == "ptp" ] && cat <<-EOF
+						ip -6 address add \$(printf "fe80::%04x:%04x:%04x:%04x/64" \$RANDOM \$RANDOM \$RANDOM \$RANDOM) dev %i || true
+						EOF
+						[ "${TOPO}" == "ptp" ] && cat <<-EOF
+						${IPT4} -t filter -A FORWARD -i %i -j ACCEPT || true
+						${IPT4} -t filter -A FORWARD -o %i -j ACCEPT || true
+						${IPT6} -t filter -A FORWARD -i %i -j ACCEPT || true
+						${IPT6} -t filter -A FORWARD -o %i -j ACCEPT || true
+						EOF
+					} | jq -R . | jq -s .
+				)" \
+				--argjson PostDown "$(\
+					{
+						[ "${TOPO}" == "ptp" ] && cat <<-EOF
+						${IPT4} -t filter -D FORWARD -i %i -j ACCEPT || true
+						${IPT4} -t filter -D FORWARD -o %i -j ACCEPT || true
+						${IPT6} -t filter -D FORWARD -i %i -j ACCEPT || true
+						${IPT6} -t filter -D FORWARD -o %i -j ACCEPT || true
+						EOF
+					} | jq -R . | jq -s .
+				)" \
 				'$ARGS.named'
 		)" \
 		'.peers += {$id: $remote}' < "${DB}" > "${DB}.tmp" && mv "${DB}.tmp" "${DB}"
 }
 
-server_mod_client_del() {
+local_mod_remote_del() {
 	# Return unless the database is a valid non-empty JSON file
 	local DB; DB="${CONF_DIR}/${IFACE}/${CONF_JSON}"
 	if [ ! -s "${DB}" ] ||  ! jq -e . >/dev/null 2>&1 < "${DB}"; then
@@ -758,18 +834,18 @@ LL_CHOSEN=$(ll_strtoint "${LOG_LEVEL,,}" "${LL_INFO}")
 [ $# -le 2 ] && log_error "Not enough arguments. Exiting." && exit 1
 case "$1" in
 	s | server | ptmp | point-to-multipoint | hub | hub-and-spoke)
-		shift
+		shift; TOPO="ptmp"
 		[ $# -le 1 ] && log_error "Not enough arguments. Exiting." && exit 1
 		case "$1" in
 			a | add)
 				shift; IFACE="$1"; validate_iface "add" || exit 1; shift
-				server_add "$@"
+				local_add "$@"
 				generate_confs
 				;;
 
 			d | del | delete)
 				shift; IFACE="$1"; validate_iface "del" || exit 1; shift
-				server_del "$@"
+				local_del "$@"
 				;;
 
 			m | mod | modify)
@@ -794,13 +870,102 @@ case "$1" in
 						case "$1" in
 							a | add)
 								shift; REMOTE_NAME="$1"; validate_remote_name "add" || exit 1; shift
-								server_mod_client_add "$@"
+								local_mod_remote_add "$@"
 								generate_confs
 								;;
 
 							d | del | delete)
 								shift; REMOTE_NAME="$1"; validate_remote_name "del" || exit 1; shift
-								server_mod_client_del "$@"
+								local_mod_remote_del "$@"
+								generate_confs
+								;;
+
+							m | mod | modify)
+								shift; REMOTE_NAME="$1"; validate_remote_name "mod" || exit 1; shift
+								log_fatal "Not implemented. Exiting." && exit 1
+								;;
+
+							*)
+								log_error "Invalid arguments. Exiting." && exit 1
+								;;
+						esac
+						;;
+
+					i | iface | interface)
+						shift
+						case "$1" in
+							m | mod | modify)
+								shift
+								log_fatal "Not implemented. Exiting." && exit 1
+								;;
+
+							*)
+								log_error "Invalid arguments. Exiting." && exit 1
+								;;
+						esac
+						;;
+
+					*)
+						log_error "Invalid arguments. Exiting." && exit 1
+						;;
+				esac
+				;;
+
+			r | regen | regenerate)
+				shift; IFACE="$1"; validate_iface "regen" || exit 1; shift
+				generate_confs
+				;;
+
+			*)
+				log_error "Invalid arguments. Exiting." && exit 1
+				;;
+		esac
+		;;
+
+	b | bridge | ptp | point-to-point)
+		shift; TOPO="ptp"
+		[ $# -le 1 ] && log_error "Not enough arguments. Exiting." && exit 1
+		case "$1" in
+			a | add)
+				shift; IFACE="$1"; validate_iface "add" || exit 1; shift
+				local_add "$@"
+				generate_confs
+				;;
+
+			d | del | delete)
+				shift; IFACE="$1"; validate_iface "del" || exit 1; shift
+				local_del "$@"
+				;;
+
+			m | mod | modify)
+				shift; IFACE="$1"; validate_iface "mod" || exit 1; shift
+				case "$1" in
+					a | amnezia)
+						shift
+						case "$1" in
+							m | mod | modify)
+								shift
+								log_fatal "Not implemented. Exiting." && exit 1
+								;;
+
+							*)
+								log_error "Invalid arguments. Exiting." && exit 1
+								;;
+						esac
+						;;
+
+					p | peer)
+						shift
+						case "$1" in
+							a | add)
+								shift; REMOTE_NAME="$1"; validate_remote_name "add" || exit 1; shift
+								local_mod_remote_add "$@"
+								generate_confs
+								;;
+
+							d | del | delete)
+								shift; REMOTE_NAME="$1"; validate_remote_name "del" || exit 1; shift
+								local_mod_remote_del "$@"
 								generate_confs
 								;;
 
