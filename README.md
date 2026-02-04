@@ -23,6 +23,7 @@ The following **extra software packages** are included as well:
 - [mandoc](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/mandoc)
 - [net-tools](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/net-tools)
 - [openssl](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/openssl)
+- [tcpdump](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/tcpdump)
 
 ## Platforms
 

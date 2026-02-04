@@ -371,6 +371,8 @@ generate_confs() {
 	local REMOTE_FW2=()
 	local REMOTE_FW3=()
 	local REMOTE_FW4=()
+	local REMOTE_JUNK=()
+	local REMOTE_JUNK_PACKET_1 REMOTE_JUNK_PACKET_2 REMOTE_JUNK_PACKET_3 REMOTE_JUNK_PACKET_4 REMOTE_JUNK_PACKET_5
 	local REMOTE_FILE
 	local IDS=(); readarray -t IDS < <(jq -r '.peers | del(."1") | keys[]' < "${DB}" | grep -v '^$')
 	local ID; for ID in "${IDS[@]}"; do
@@ -396,6 +398,21 @@ generate_confs() {
 		readarray -t REMOTE_FW2 < <(jq -r --arg id "${ID}" '.peers."\($id)".PostUp // [] | join("\n")' < "${DB}" | grep -v '^$')
 		readarray -t REMOTE_FW3 < <(jq -r --arg id "${ID}" '.peers."\($id)".PreDown // [] | join("\n")' < "${DB}" | grep -v '^$')
 		readarray -t REMOTE_FW4 < <(jq -r --arg id "${ID}" '.peers."\($id)".PostDown // [] | join("\n")' < "${DB}" | grep -v '^$')
+		readarray -t REMOTE_JUNK < <(jq -r --arg id "${ID}" '.peers."\($id)".SpecialJunk // [] | join("\n")' < "${DB}" | grep -v '^$')
+
+		if [ "${#REMOTE_JUNK[@]}" -gt 0 ]; then
+			REMOTE_JUNK_PACKET_1="${REMOTE_JUNK[0]}"
+			[ "${#REMOTE_JUNK[@]}" -gt 1 ] && REMOTE_JUNK_PACKET_2="${REMOTE_JUNK[1]}" || REMOTE_JUNK_PACKET_2="#"
+			[ "${#REMOTE_JUNK[@]}" -gt 2 ] && REMOTE_JUNK_PACKET_3="${REMOTE_JUNK[2]}" || REMOTE_JUNK_PACKET_3="#"
+			[ "${#REMOTE_JUNK[@]}" -gt 3 ] && REMOTE_JUNK_PACKET_4="${REMOTE_JUNK[3]}" || REMOTE_JUNK_PACKET_4="#"
+			[ "${#REMOTE_JUNK[@]}" -gt 4 ] && REMOTE_JUNK_PACKET_5="${REMOTE_JUNK[4]}" || REMOTE_JUNK_PACKET_5="#"
+		else
+			REMOTE_JUNK_PACKET_1="${SPECIAL_JUNK_PACKET_1}"
+			REMOTE_JUNK_PACKET_2="${SPECIAL_JUNK_PACKET_2}"
+			REMOTE_JUNK_PACKET_3="${SPECIAL_JUNK_PACKET_3}"
+			REMOTE_JUNK_PACKET_4="${SPECIAL_JUNK_PACKET_4}"
+			REMOTE_JUNK_PACKET_5="${SPECIAL_JUNK_PACKET_5}"
+		fi
 
 		REMOTE_FILE="${CONF_DIR}/${IFACE}/${REMOTE_NAME}.conf"
 
@@ -418,11 +435,11 @@ generate_confs() {
 		H2 = ${RESPONSE_PACKET_MAGIC_HEADER}
 		H3 = ${UNDERLOAD_PACKET_MAGIC_HEADER}
 		H4 = ${TRANSPORT_PACKET_MAGIC_HEADER}
-		$([ "${SPECIAL_JUNK_PACKET_1}" != "#" ] && echo "I1 = ${SPECIAL_JUNK_PACKET_1}" || echo "# I1 =")
-		$([ "${SPECIAL_JUNK_PACKET_2}" != "#" ] && echo "I2 = ${SPECIAL_JUNK_PACKET_2}" || echo "# I2 =")
-		$([ "${SPECIAL_JUNK_PACKET_3}" != "#" ] && echo "I3 = ${SPECIAL_JUNK_PACKET_3}" || echo "# I3 =")
-		$([ "${SPECIAL_JUNK_PACKET_4}" != "#" ] && echo "I4 = ${SPECIAL_JUNK_PACKET_4}" || echo "# I4 =")
-		$([ "${SPECIAL_JUNK_PACKET_5}" != "#" ] && echo "I5 = ${SPECIAL_JUNK_PACKET_5}" || echo "# I5 =")
+		$([ "${REMOTE_JUNK_PACKET_1}" != "#" ] && echo "I1 = ${REMOTE_JUNK_PACKET_1}" || echo "# I1 =")
+		$([ "${REMOTE_JUNK_PACKET_2}" != "#" ] && echo "I2 = ${REMOTE_JUNK_PACKET_2}" || echo "# I2 =")
+		$([ "${REMOTE_JUNK_PACKET_3}" != "#" ] && echo "I3 = ${REMOTE_JUNK_PACKET_3}" || echo "# I3 =")
+		$([ "${REMOTE_JUNK_PACKET_4}" != "#" ] && echo "I4 = ${REMOTE_JUNK_PACKET_4}" || echo "# I4 =")
+		$([ "${REMOTE_JUNK_PACKET_5}" != "#" ] && echo "I5 = ${REMOTE_JUNK_PACKET_5}" || echo "# I5 =")
 		$([ "${#REMOTE_FW1[@]}" -gt 0 ] && printf "PreUp = %s\n" "${REMOTE_FW1[@]}" | sed 's/\n$//' || echo "# PreUp =")
 		$([ "${#REMOTE_FW2[@]}" -gt 0 ] && printf "PostUp = %s\n" "${REMOTE_FW2[@]}" | sed 's/\n$//' || echo "# PostUp =")
 		$([ "${#REMOTE_FW3[@]}" -gt 0 ] && printf "PreDown = %s\n" "${REMOTE_FW3[@]}" | sed 's/\n$//' || echo "# PreDown =")
@@ -628,7 +645,7 @@ local_add() {
 				--argjson AllowedIPs "[$(printf "\"%s\", " "${LOCAL_IPS[@]}" | sed 's/, $//')]" \
 				--arg Table "${LOCAL_TABLE}" \
 				--argjson PersistentKeepalive "25" \
-				--argjson PreUp "$(\
+				--argjson PreUp "$(
 					{
 						cat <<-EOF
 						ip -6 address add \$(printf "fe80::%04x:%04x:%04x:%04x/64" \$RANDOM \$RANDOM \$RANDOM \$RANDOM) dev %i || true
@@ -645,7 +662,7 @@ local_add() {
 						EOF
 					} | jq -R . | jq -s .
 				)" \
-				--argjson PostDown "$(\
+				--argjson PostDown "$(
 					{
 						cat <<-EOF
 						${IPT4} -t filter -D FORWARD -i %i -j ACCEPT || true
@@ -706,6 +723,46 @@ local_mod_remote_add() {
 	REMOTE_PUBLIC_KEY="$(echo "${REMOTE_PRIVATE_KEY}" | awg pubkey)"
 	REMOTE_PRESHARED_KEY="$(awg genpsk)"
 
+	# Obtain the endpoint host:port combination
+	local LOCAL_HOST
+	local LOCAL_PORT
+	read -r \
+		LOCAL_HOST LOCAL_PORT \
+		<<< "$(
+			jq -r '.peers."1" | [
+				.Host // "#",
+				.ListenPort // 0,
+				] | join(" ")' < "${DB}"
+		)"
+	[ "${LOCAL_HOST}" == "#" ] && LOCAL_HOST="cdn.$(printf '%04x' ${RANDOM} ${RANDOM}).com"
+	[ "${LOCAL_PORT}" -eq 0 ] && LOCAL_PORT="443"
+
+	# Generate up to 5 unique junk packets emulating QUIC
+	local SPECIAL_JUNK_PACKETS=()
+	local PCAP; PCAP="$(mktemp)"
+	if [ -f "${PCAP}" ]; then
+		local OUT RES
+		OUT="$(/bin/bash -- /app/dumpquic.sh -c 5 -d out -h "${LOCAL_HOST}" -p "${LOCAL_PORT}" -r 0.0.0.1 -t 5 -w "${PCAP}" 2>&1)"
+		RES=$?
+		log_trace "${OUT}"
+		log_trace "Command \`/bin/bash -- /app/dumpquic.sh -c 5 -d out -h \"${LOCAL_HOST}\" -p \"${LOCAL_PORT}\" -r 0.0.0.1 -t 5 -w \"${PCAP}\" 2>&1\` exited with status code ${RES}."
+
+		if [ "${RES}" -eq 0 ]; then
+			OUT="$(/bin/bash -- /app/makejunk.sh -c 5 -l 1200 -r "${PCAP}" 2>&1)"
+			RES=$?
+			log_trace "${OUT}"
+			log_trace "Command \`/bin/bash -- /app/makejunk.sh -c 5 -l 1200 -r \"${PCAP}\" 2>&1\` exited with status code ${RES}."
+
+			if [ "${RES}" -eq 0 ] && [ "${#OUT}" -gt 0 ]; then
+				local LINE; while IFS= read -r LINE; do
+					SPECIAL_JUNK_PACKETS+=("<b 0x${LINE}>")
+				done <<< "${OUT}"
+			fi
+		fi
+
+		rm -- "${PCAP}" &>/dev/null ||  true
+	fi
+
 	jq \
 		--arg id "${ID}" \
 		--argjson remote "$(
@@ -718,7 +775,7 @@ local_mod_remote_add() {
 				--argjson AllowedIPs "[$(printf "\"%s\", " "${REMOTE_IPS[@]}" | sed 's/, $//')]" \
 				--argjson DNS "[$(printf "\"%s\", " "${REMOTE_DNS[@]}" | sed 's/, $//')]" \
 				--arg Table "${REMOTE_TABLE}" \
-				--argjson PreUp "$(\
+				--argjson PreUp "$(
 					{
 						[ "${TOPO}" == "ptp" ] && cat <<-EOF
 						ip -6 address add \$(printf "fe80::%04x:%04x:%04x:%04x/64" \$RANDOM \$RANDOM \$RANDOM \$RANDOM) dev %i || true
@@ -731,7 +788,7 @@ local_mod_remote_add() {
 						EOF
 					} | jq -R . | jq -s .
 				)" \
-				--argjson PostDown "$(\
+				--argjson PostDown "$(
 					{
 						[ "${TOPO}" == "ptp" ] && cat <<-EOF
 						${IPT4} -t filter -D FORWARD -i %i -j ACCEPT || true
@@ -739,6 +796,11 @@ local_mod_remote_add() {
 						${IPT6} -t filter -D FORWARD -i %i -j ACCEPT || true
 						${IPT6} -t filter -D FORWARD -o %i -j ACCEPT || true
 						EOF
+					} | jq -R . | jq -s .
+				)" \
+				--argjson SpecialJunk "$(
+					{
+						[ "${#SPECIAL_JUNK_PACKETS[@]}" -gt 0 ] && printf '%s\n' "${SPECIAL_JUNK_PACKETS[@]}"
 					} | jq -R . | jq -s .
 				)" \
 				'$ARGS.named'

@@ -90,6 +90,7 @@ RUN DEPS=" \
     mandoc \
     net-tools \
     openssl \
+    tcpdump \
     "; \
     apk add --update --no-cache --virtual .deps ${DEPS} && \
     mkdir -p /usr/share/man/man8 /usr/share/bash-completion/completions && \
