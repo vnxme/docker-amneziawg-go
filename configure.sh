@@ -731,7 +731,7 @@ local_mod_remote_add() {
 		<<< "$(
 			jq -r '.peers."1" | [
 				.Host // "#",
-				.ListenPort // 0,
+				.ListenPort // 0
 				] | join(" ")' < "${DB}"
 		)"
 	[ "${LOCAL_HOST}" == "#" ] && LOCAL_HOST="cdn.$(printf '%04x' ${RANDOM} ${RANDOM}).com"
