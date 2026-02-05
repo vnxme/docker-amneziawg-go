@@ -248,6 +248,7 @@ generate_confs() {
 	# Return unless the database is a valid non-empty JSON file
 	local DB; DB="${CONF_DIR}/${IFACE}/${CONF_JSON}"
 	if [ ! -s "${DB}" ] ||  ! jq -e . >/dev/null 2>&1 < "${DB}"; then
+		log_error "Database ${DB} is missing or invalid. Exiting."
 		return 1
 	fi
 
@@ -692,11 +693,13 @@ local_mod_remote_add() {
 	# Return unless the database is a valid non-empty JSON file
 	local DB; DB="${CONF_DIR}/${IFACE}/${CONF_JSON}"
 	if [ ! -s "${DB}" ] ||  ! jq -e . >/dev/null 2>&1 < "${DB}"; then
+		log_error "Database ${DB} is missing or invalid. Exiting."
 		return 1
 	fi
 
 	local ID; ID="$(jq -r '.peers // {"1":{}} | keys | map(tonumber? // .) | max' < "${DB}")"; ID="$((ID+1))"
 	if [ "${TOPO}" == "ptp" ] && [ "${ID}" -gt 2 ]; then
+		log_error "Only one peer is allowed for the point-point-point topology. Exiting."
 		return 1
 	fi
 
@@ -812,6 +815,7 @@ local_mod_remote_del() {
 	# Return unless the database is a valid non-empty JSON file
 	local DB; DB="${CONF_DIR}/${IFACE}/${CONF_JSON}"
 	if [ ! -s "${DB}" ] ||  ! jq -e . >/dev/null 2>&1 < "${DB}"; then
+		log_error "Database ${DB} is missing or invalid. Exiting."
 		return 1
 	fi
 
@@ -901,13 +905,13 @@ case "$1" in
 		case "$1" in
 			a | add)
 				shift; IFACE="$1"; validate_iface "add" || exit 1; shift
-				local_add "$@"
-				generate_confs
+				local_add "$@" || exit 1
+				generate_confs || exit 1
 				;;
 
 			d | del | delete)
 				shift; IFACE="$1"; validate_iface "del" || exit 1; shift
-				local_del "$@"
+				local_del "$@" || exit 1
 				;;
 
 			m | mod | modify)
@@ -932,14 +936,14 @@ case "$1" in
 						case "$1" in
 							a | add)
 								shift; REMOTE_NAME="$1"; validate_remote_name "add" || exit 1; shift
-								local_mod_remote_add "$@"
-								generate_confs
+								local_mod_remote_add "$@" || exit 1
+								generate_confs || exit 1
 								;;
 
 							d | del | delete)
 								shift; REMOTE_NAME="$1"; validate_remote_name "del" || exit 1; shift
-								local_mod_remote_del "$@"
-								generate_confs
+								local_mod_remote_del "$@" || exit 1
+								generate_confs || exit 1
 								;;
 
 							m | mod | modify)
@@ -975,7 +979,7 @@ case "$1" in
 
 			r | regen | regenerate)
 				shift; IFACE="$1"; validate_iface "regen" || exit 1; shift
-				generate_confs
+				generate_confs || exit 1
 				;;
 
 			*)
@@ -990,13 +994,13 @@ case "$1" in
 		case "$1" in
 			a | add)
 				shift; IFACE="$1"; validate_iface "add" || exit 1; shift
-				local_add "$@"
-				generate_confs
+				local_add "$@" || exit 1
+				generate_confs || exit 1
 				;;
 
 			d | del | delete)
 				shift; IFACE="$1"; validate_iface "del" || exit 1; shift
-				local_del "$@"
+				local_del "$@" || exit 1
 				;;
 
 			m | mod | modify)
@@ -1021,14 +1025,14 @@ case "$1" in
 						case "$1" in
 							a | add)
 								shift; REMOTE_NAME="$1"; validate_remote_name "add" || exit 1; shift
-								local_mod_remote_add "$@"
-								generate_confs
+								local_mod_remote_add "$@" || exit 1
+								generate_confs || exit 1
 								;;
 
 							d | del | delete)
 								shift; REMOTE_NAME="$1"; validate_remote_name "del" || exit 1; shift
-								local_mod_remote_del "$@"
-								generate_confs
+								local_mod_remote_del "$@" || exit 1
+								generate_confs || exit 1
 								;;
 
 							m | mod | modify)
@@ -1064,7 +1068,7 @@ case "$1" in
 
 			r | regen | regenerate)
 				shift; IFACE="$1"; validate_iface "regen" || exit 1; shift
-				generate_confs
+				generate_confs || exit 1
 				;;
 
 			*)
