@@ -766,6 +766,20 @@ local_mod_remote_add() {
 		rm -- "${PCAP}" &>/dev/null ||  true
 	fi
 
+	# Choose the iptables flavour
+	local IPT_MODULES_NEW IPT_MODULES_OLD
+	IPT_MODULES_NEW="$(lsmod | grep -E "^nft_")"
+	IPT_MODULES_OLD="$(lsmod | grep -E "^iptable_")"
+	local IPT4="iptables"
+	local IPT6="ip6tables"
+	if [ -z "${IPT_MODULES_NEW}" ] && [ -n "${IPT_MODULES_OLD}" ]; then
+		IPT4="iptables-legacy"
+		IPT6="ip6tables-legacy"
+	elif [ -n "${IPT_MODULES_NEW}" ] && [ -z "${IPT_MODULES_OLD}" ]; then
+		IPT4="iptables-nft"
+		IPT6="ip6tables-nft"
+	fi
+
 	jq \
 		--arg id "${ID}" \
 		--argjson remote "$(
