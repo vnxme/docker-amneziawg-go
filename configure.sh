@@ -642,7 +642,7 @@ local_add() {
 				--arg PrivateKey "${LOCAL_PRIVATE_KEY}" \
 				--arg PublicKey "${LOCAL_PUBLIC_KEY}" \
 				--argjson Address "[\"${LOCAL_IPV4_ADDR}/${LOCAL_IPV4_MASK}\", \"${LOCAL_IPV6_ADDR}/${LOCAL_IPV6_MASK}\"]" \
-				--argjson AllowedIPs "[$(printf "\"%s\", " "${LOCAL_IPS[@]}" | sed 's/, $//')]" \
+				--argjson AllowedIPs "[$([ "${#LOCAL_IPS[@]}" -gt 0 ] && printf "\"%s\", " "${LOCAL_IPS[@]}" | sed 's/, $//')]" \
 				--arg Table "${LOCAL_TABLE}" \
 				--argjson PersistentKeepalive "25" \
 				--argjson PreUp "$(
@@ -771,9 +771,9 @@ local_mod_remote_add() {
 				--arg PrivateKey "${REMOTE_PRIVATE_KEY}" \
 				--arg PublicKey "${REMOTE_PUBLIC_KEY}" \
 				--arg PresharedKey "${REMOTE_PRESHARED_KEY}" \
-				--argjson Address "[$(printf "\"%s\", " "${REMOTE_ADDR[@]}" | sed 's/, $//')]" \
-				--argjson AllowedIPs "[$(printf "\"%s\", " "${REMOTE_IPS[@]}" | sed 's/, $//')]" \
-				--argjson DNS "[$(printf "\"%s\", " "${REMOTE_DNS[@]}" | sed 's/, $//')]" \
+				--argjson Address "[$([ "${#REMOTE_ADDR[@]}" -gt 0 ] && printf "\"%s\", " "${REMOTE_ADDR[@]}" | sed 's/, $//')]" \
+				--argjson AllowedIPs "[$([ "${#REMOTE_IPS[@]}" -gt 0 ] && printf "\"%s\", " "${REMOTE_IPS[@]}" | sed 's/, $//')]" \
+				--argjson DNS "[$([ "${#REMOTE_DNS[@]}" -gt 0 ] && printf "\"%s\", " "${REMOTE_DNS[@]}" | sed 's/, $//')]" \
 				--arg Table "${REMOTE_TABLE}" \
 				--argjson PreUp "$(
 					{
