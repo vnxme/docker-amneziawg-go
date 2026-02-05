@@ -326,7 +326,7 @@ generate_confs() {
 
 	local LOCAL_FILE; LOCAL_FILE="${CONF_DIR}/${IFACE}.conf"
 
-	# Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/configure_container.sh
+	# Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.9/client/server_scripts/awg/configure_container.sh
 	cat <<-EOF | sed '/^#.*=$/d' > "${LOCAL_FILE}"
 	[Interface]
 	# Host = ${LOCAL_HOST}

@@ -17,7 +17,7 @@
 # https://github.com/amnezia-vpn/amneziawg-go/blob/v0.2.16/Dockerfile
 # https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/.github/workflows/linux-build.yml
 # https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/src/Makefile
-# https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.6/client/server_scripts/awg/Dockerfile
+# https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.9/client/server_scripts/awg/Dockerfile
 
 ARG ALPINE_VERSION=3.23.2
 ARG GOLANG_VERSION=1.25.5
