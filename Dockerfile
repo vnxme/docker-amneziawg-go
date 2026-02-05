@@ -19,7 +19,7 @@
 # https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/src/Makefile
 # https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.9/client/server_scripts/awg/Dockerfile
 
-ARG ALPINE_VERSION=3.23.2
+ARG ALPINE_VERSION=3.23.3
 ARG GOLANG_VERSION=1.25.5
 ARG XXTOOL_VERSION=1.9.0
 
