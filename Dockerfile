@@ -20,7 +20,7 @@
 # https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.9/client/server_scripts/awg/Dockerfile
 
 ARG ALPINE_VERSION=3.23.3
-ARG GOLANG_VERSION=1.25.5
+ARG GOLANG_VERSION=1.25.7
 ARG XXTOOL_VERSION=1.9.0
 
 FROM --platform=$BUILDPLATFORM tonistiigi/xx:${XXTOOL_VERSION} AS xx
