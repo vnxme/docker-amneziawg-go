@@ -493,7 +493,7 @@ local_add() {
 	# from the fd00::/8 block based on bytes [1:7] of the public key
 	local LOCAL_IPV6_BYTES LOCAL_IPV6_NET LOCAL_IPV6_MASK LOCAL_IPV6_ADDR
 	LOCAL_IPV6_BYTES="$(echo "${LOCAL_PUBLIC_KEY}" | base64 -d | dd bs=1 count=7 skip=1 status=none | xxd -p)"
-	LOCAL_IPV6_NET="fd$(printf '%x' $((0x03 & 0x${LOCAL_IPV6_BYTES:0:2}))):${LOCAL_IPV6_BYTES:2:4}:${LOCAL_IPV6_BYTES:6:4}:${LOCAL_IPV6_BYTES:10:4}::"
+	LOCAL_IPV6_NET="fd$(printf '%02x' $((0x03 & 0x${LOCAL_IPV6_BYTES:0:2}))):${LOCAL_IPV6_BYTES:2:4}:${LOCAL_IPV6_BYTES:6:4}:${LOCAL_IPV6_BYTES:10:4}::"
 	LOCAL_IPV6_MASK="$((128 - (32 - LOCAL_IPV4_MASK)))" # Make IPv4 and IPv6 subnets equally sized
 	LOCAL_IPV6_ADDR="$(get_nth_ipv6 "${LOCAL_IPV6_NET}/${LOCAL_IPV6_MASK}" 1)"
 
