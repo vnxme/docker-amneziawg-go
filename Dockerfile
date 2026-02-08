@@ -69,6 +69,7 @@ WORKDIR /app/export
 RUN \
     mkdir -p bin com man && \
     cp /app/go/amneziawg-go                               ./bin/amneziawg-go && \
+    cp /app/tools/contrib/json/wg-json                    ./bin/awg-json && \
     cp /app/tools/src/wg                                  ./bin/awg && \
     cp /app/tools/src/wg-quick/linux.bash                 ./bin/awg-quick && \
     cp /app/tools/src/completion/wg.bash-completion       ./com/awg && \
