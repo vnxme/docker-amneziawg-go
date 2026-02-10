@@ -48,16 +48,53 @@ The container images are based on [Alpine](https://hub.docker.com/_/alpine). The
 
 ## Hooks
 
-The entrypoint (`/app/entrypoint.sh`) has four pre-defined hooks:
-- **pre-up** for any scripts to run before tunnels are enabled;
-- **post-up** for any scripts to run after tunnels are enabled;
-- **pre-down** for any scripts to run before tunnels are disabled;
-- **post-down** for any scripts to run after tunnels are disabled.
+### Entrypoint Hooks
 
-By default, these scripts (`*.sh`) must be placed in the `/app/hooks/{pre-up,post-up,pre-down,post-down}` directories which are created automatically if missing. The `/app` part of the path may be overriden with the `-w` (or `--workdir`) flag of the `docker run` command, and the intermediate part of the path may be set with the `-e` (or `--env`) flag of the `docker run` command by adjusting the `HOOK_DIR` environment variable which equals `./hooks` if empty.
+The entrypoint script (`/app/entrypoint.sh`) supports four predefined lifecycle hooks:
+
+- **pre-up**: Executed before tunnels are enabled  
+- **post-up**: Executed after tunnels are enabled  
+- **pre-down**: Executed before tunnels are disabled  
+- **post-down**: Executed after tunnels are disabled  
+
+### Hook Script Locations
+
+Hook scripts must be shell scripts (`*.sh`) and are executed from the following directories by default:
+
+- `/app/hooks/pre-up`
+- `/app/hooks/post-up`
+- `/app/hooks/pre-down`
+- `/app/hooks/post-down`
+
+These directories are created automatically if they do not exist.
+
+### Customizing Hook Paths
+
+The base working directory (`/app`) can be overridden using the `-w` or `--workdir` option of the `docker run` command.
+
+The intermediate hooks directory can be customized by setting the `HOOK_DIR` environment variable via the `-e` or `--env` option of the `docker run` command. If `HOOK_DIR` is not set, it defaults to `./hooks`.
 
 ## Logs
 
-The entrypoint supports 6 log levels: `fatal`, `error`, `warn`, `info`, `debug`, and `trace`. The default log level is `info`. Adjust the `LOG_LEVEL` environment variable to set the desired log level. If the `fatal` log level is set, no messages are expected to be shown, so the container will be (almost) completely silent. If the `trace` log level is set, the entrypoint prints outputs and exit codes of various subcommands in addition to its own messages. All messages are written to stdout.
+### Entrypoing Logging
 
-The `awg`, `awg-quick` and `amneziawg-go` executables are normally verbose. The entrypoint redirects anything they output to `${LOG_DIR}/${INTERFACE}.log` files. If the `LOG_DIR` environment variable is empty, the `/var/log/amneziawg` directory is used by default.
+The entrypoint supports the following log levels:
+
+- `fatal`
+- `error`
+- `warn`
+- `info`
+- `debug`
+- `trace`
+
+The default log level is `info`. The log level can be configured by setting the `LOG_LEVEL` environment variable.
+
+When `LOG_LEVEL` is set to `fatal`, no log messages are expected to be produced, and the container will be almost completely silent.
+
+When `LOG_LEVEL` is set to `trace`, the entrypoint outputs additional diagnostic information, including the standard output and exit codes of various subcommands, in addition to its own log messages.
+
+All entrypoint log messages are written to standard output (`stdout`).
+
+### Executable Output Redirection
+
+The `awg`, `awg-quick`, and `amneziawg-go` executables are typically verbose. Any output produced by these executables is redirected to per-interface log files located at: `${LOG_DIR}/${INTERFACE}.log`. If the `LOG_DIR` environment variable is not set or is empty, logs are written to the default directory: `/var/log/amneziawg`.
