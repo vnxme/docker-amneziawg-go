@@ -1,6 +1,12 @@
 ## Summary
 
-A set of container images of AmneziaWG-Go.
+A set of container images of AmneziaWG-Go. [Source Code](https://github.com/vnxme/docker-amneziawg-go).
+
+### Registries
+
+The container images are published in the following registries:
+- [Docker Hub](https://hub.docker.com/r/vnxme/amneziawg-go)
+- [GitHub Container Registry](https://github.com/vnxme/docker-amneziawg-go/pkgs/container/amneziawg-go)
 
 ## Description
 
