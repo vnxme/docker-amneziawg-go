@@ -15,12 +15,12 @@
 # References:
 # https://github.com/tonistiigi/xx/blob/v1.9.0/README.md
 # https://github.com/amnezia-vpn/amneziawg-go/blob/v0.2.16/Dockerfile
-# https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/.github/workflows/linux-build.yml
-# https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20250903/src/Makefile
-# https://github.com/amnezia-vpn/amnezia-client/blob/4.8.12.9/client/server_scripts/awg/Dockerfile
+# https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20260223/.github/workflows/linux-build.yml
+# https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20260223/src/Makefile
+# https://github.com/amnezia-vpn/amnezia-client/blob/4.8.14.5/client/server_scripts/awg/Dockerfile
 
 ARG ALPINE_VERSION=3.23.3
-ARG GOLANG_VERSION=1.25.7
+ARG GOLANG_VERSION=1.26.1
 ARG XXTOOL_VERSION=1.9.0
 
 FROM --platform=$BUILDPLATFORM tonistiigi/xx:${XXTOOL_VERSION} AS xx
@@ -53,7 +53,7 @@ RUN \
 WORKDIR /app/tools
 
 ARG TOOLS_BRANCH=master
-ARG TOOLS_COMMIT=5c6ffd6168f7c69199200a91803fa02e1b8c4152
+ARG TOOLS_COMMIT=5d6179a6d0842e98dfb349c28cf1bd8e4b9d1079
 ARG TOOLS_REPO=https://github.com/amnezia-vpn/amneziawg-tools
 
 RUN \
