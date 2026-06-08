@@ -14,13 +14,13 @@
 
 # References:
 # https://github.com/tonistiigi/xx/blob/v1.9.0/README.md
-# https://github.com/amnezia-vpn/amneziawg-go/blob/v0.2.16/Dockerfile
+# https://github.com/amnezia-vpn/amneziawg-go/blob/v0.2.18/Dockerfile
 # https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20260223/.github/workflows/linux-build.yml
 # https://github.com/amnezia-vpn/amneziawg-tools/blob/v1.0.20260223/src/Makefile
-# https://github.com/amnezia-vpn/amnezia-client/blob/4.8.14.5/client/server_scripts/awg/Dockerfile
+# https://github.com/amnezia-vpn/amnezia-client/blob/4.8.16.0/client/server_scripts/awg/Dockerfile
 
-ARG ALPINE_VERSION=3.23.3
-ARG GOLANG_VERSION=1.26.1
+ARG ALPINE_VERSION=3.23.4
+ARG GOLANG_VERSION=1.26.4
 ARG XXTOOL_VERSION=1.9.0
 
 FROM --platform=$BUILDPLATFORM tonistiigi/xx:${XXTOOL_VERSION} AS xx
@@ -36,7 +36,7 @@ ARG TARGETARCH TARGETOS TARGETPLATFORM TARGETVARIANT
 WORKDIR /app/go
 
 ARG GO_BRANCH=master
-ARG GO_COMMIT=449d7cffd4adf86971bd679d0be5384b443e8be5
+ARG GO_COMMIT=f4f4c999267437c3eb909e8d0e5278fb4596d9a7
 ARG GO_REPO=https://github.com/amnezia-vpn/amneziawg-go
 
 RUN \

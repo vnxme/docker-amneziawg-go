@@ -327,7 +327,7 @@ generate_confs() {
 
 	local LOCAL_FILE; LOCAL_FILE="${CONF_DIR}/${IFACE}.conf"
 
-	# Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.14.5/client/server_scripts/awg/configure_container.sh
+	# Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.16.0/client/server_scripts/awg/configure_container.sh
 	cat <<-EOF | sed '/^#.*=$/d' > "${LOCAL_FILE}"
 	[Interface]
 	# Host = ${LOCAL_HOST}
@@ -417,7 +417,7 @@ generate_confs() {
 
 		REMOTE_FILE="${CONF_DIR}/${IFACE}/${REMOTE_NAME}.conf"
 
-		# Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.14.5/client/server_scripts/awg/template.conf
+		# Ref: https://github.com/amnezia-vpn/amnezia-client/blob/4.8.16.0/client/server_scripts/awg/template.conf
 		cat <<-EOF | sed '/^#.*=$/d' > "${REMOTE_FILE}"
 		[Interface]
 		$([ "${REMOTE_PORT}" -gt 0 ] && echo "ListenPort = ${REMOTE_PORT}" || echo "# ListenPort =")
@@ -539,8 +539,8 @@ local_add() {
 
 	# Refer to the following documents for the recommended values:
 	# https://docs.amnezia.org/documentation/amnezia-wg/
-	# https://github.com/amnezia-vpn/amneziawg-go/blob/v0.2.16/README.md
-	# https://github.com/amnezia-vpn/amneziawg-linux-kernel-module/blob/v1.0.20260210/README.md
+	# https://github.com/amnezia-vpn/amneziawg-go/blob/v0.2.18/README.md
+	# https://github.com/amnezia-vpn/amneziawg-linux-kernel-module/blob/v1.0.20260329/README.md
 
 	# Jc, Jmin, Jmax
 	# 0 ≤ Jc ≤ 128; recommended range is [4;12]
